@@ -1,0 +1,8 @@
+## Interface: 11506
+## Title: TypeCraft
+## Notes: An embedded typing game to play when you're waiting for stuff.
+## Author: Skidd McMarx
+## Version: 0.1.0
+
+TypeCraftWords.lua
+TypeCraft.lua
