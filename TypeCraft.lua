@@ -159,6 +159,7 @@ TypeCraftWord = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalL
 TypeCraftWord:SetPoint("TOPRIGHT", TypeCraftFrame, "TOPRIGHT", -10, -30)
 TypeCraftWord:SetJustifyH("RIGHT")  -- Align text to the right
 TypeCraftWord:SetFont("Interface/AddOns/TypeCraft/fonts/RobotoMono.ttf", 14, "OUTLINE")
+TypeCraftWord:SetFont("Interface/AddOns/TypeCraft/fonts/RobotoMono.ttf", 12, "OUTLINE")
 
 -- Result message
 TypeCraftResult = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
