@@ -14,6 +14,7 @@ local challengeActive = false
 local timerRunning = false
 local timerDuration = 30
 local correctCount = 0
+local characterCount = 0;
 local errorCount = 0
 local timerRemaining = timerDuration
 local timerTicker
@@ -67,6 +68,7 @@ end
 -- Function to start a new typing challenge
 local function StartNewChallenge()
     correctCount = 0
+    characterCount = 0
     errorCount = 0
     currentWords = {}
     challengeActive = true
@@ -89,8 +91,9 @@ local function EndCurrentChallenge()
     timerRemaining = 0
     timerRunning = false
     challengeActive = false
-    local wordsPerMinute = math.floor((correctCount / timerDuration) * 60)
-    TypeCraftWPMText:SetText("WPM: " .. wordsPerMinute)
+    local timeInMinutes = timerDuration / 60
+    local wpm = math.floor((characterCount / 5) / timeInMinutes)
+    TypeCraftWPMText:SetText("WPM: " .. wpm)
     TypeCraftWord:SetText("")
     ShowTemporaryResultMessage(" Time's up!", RED)
 end
@@ -125,7 +128,8 @@ local function HandleWordEntry(input)
     local trimmedInput = trim(input)
     if trimmedInput:lower() == currentWords[1]:lower() then
         ShowTemporaryResultMessage("Correct!", GREEN)
-        correctCount = correctCount + 1
+        correctCount = correctCount + 1 
+        characterCount = characterCount + #currentWords[1] + 1  -- +1 for the space
     else
         ShowTemporaryResultMessage("Wrong :(", RED)
         errorCount = errorCount + 1
@@ -140,7 +144,7 @@ end
 
 -- Create the main frame
 TypeCraftFrame = CreateFrame("Frame", "TypeCraftFrame", UIParent, "BasicFrameTemplateWithInset")
-TypeCraftFrame:SetSize(700, 160)
+TypeCraftFrame:SetSize(900, 160)
 TypeCraftFrame:SetPoint("CENTER")
 TypeCraftFrame:SetMovable(true)
 TypeCraftFrame:EnableMouse(true)
@@ -158,7 +162,6 @@ TypeCraftFrame.title:SetText("TypeCraft")
 TypeCraftWord = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 TypeCraftWord:SetPoint("TOPRIGHT", TypeCraftFrame, "TOPRIGHT", -10, -30)
 TypeCraftWord:SetJustifyH("RIGHT")  -- Align text to the right
-TypeCraftWord:SetFont("Interface/AddOns/TypeCraft/fonts/RobotoMono.ttf", 14, "OUTLINE")
 TypeCraftWord:SetFont("Interface/AddOns/TypeCraft/fonts/RobotoMono.ttf", 12, "OUTLINE")
 
 -- Result message
