@@ -1,9 +1,9 @@
--- Function to pick a random word from the list
 local function PickRandomWord()
     return TypeCraftWords[math.random(#TypeCraftWords)]
 end
+
 local TypeCraftFrame, TypeCraftWord, TypeCraftResult, TypeCraftInput
-local currentWord = ""
+local currentWords = {}
 
 -- Function to update the word display
 local function UpdateWordDisplay()
@@ -12,16 +12,6 @@ local function UpdateWordDisplay()
         displayText = displayText .. word .. " "
     end
     TypeCraftWord:SetText(displayText)
-end
--- Function to start a new typing challenge
-local function StartNewChallenge()
-    currentWords = {}
-    for i = 1, 10 do
-        table.insert(currentWords, PickRandomWord())
-    end
-    UpdateWordDisplay()
-    TypeCraftFrame:Show()
-    TypeCraftInput:SetFocus()
 end
 
 -- Function to highlight the current word
@@ -36,30 +26,52 @@ local function HighlightCurrentWord()
     end
     TypeCraftWord:SetText(displayText)
 end
+
+-- Function to trim whitespace from input
 local function trim(s)
     return s:match("^%s*(.-)%s*$")
 end
-local function ShowTemporaryResultMessage(message)
+
+-- Function to show temporary result messages
+local function ShowTemporaryResultMessage(message, color)
+    TypeCraftResult:SetTextColor(color.r, color.g, color.b)
     TypeCraftResult:SetText(message)
     C_Timer.After(0.3, function()
         TypeCraftResult:SetText("")
     end)
 end
+
 -- Function to handle word entry
 local function HandleWordEntry(input)
     local trimmedInput = trim(input)
     if trimmedInput:lower() == currentWords[1]:lower() then
-        ShowTemporaryResultMessage("Correct!")
+        ShowTemporaryResultMessage("Correct!", { r = 0.0, g = 1.0, b = 0.0 })
     else
-        ShowTemporaryResultMessage("Wrong :(")
+        ShowTemporaryResultMessage("Wrong :(", { r = 1.0, g = 0.0, b = 0.0 }) 
     end
     table.remove(currentWords, 1)
-    UpdateWordDisplay()
     if #currentWords == 0 then
-        StartNewChallenge()
+        StartNewLine()
     else
         HighlightCurrentWord()
     end
+end
+
+-- Function to start a new line
+function StartNewLine()
+    currentWords = {}
+    for i = 1, 10 do
+        table.insert(currentWords, PickRandomWord())
+    end
+    UpdateWordDisplay()
+    HighlightCurrentWord()
+end
+
+-- Function to start a new typing challenge
+function StartNewChallenge()
+    StartNewLine()
+    TypeCraftFrame:Show()
+    TypeCraftInput:SetFocus()
 end
 
 -- Create the main frame
@@ -102,8 +114,8 @@ TypeCraftInput:SetScript("OnEscapePressed", function(self)
 end)
 TypeCraftInput:SetScript("OnKeyDown", function(self, key)
     if key == "SPACE" then
-    HandleWordEntry(self:GetText())
-    self:SetText("")
+        HandleWordEntry(self:GetText())
+        self:SetText("")
     end
 end)
 
