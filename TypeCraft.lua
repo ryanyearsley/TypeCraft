@@ -8,11 +8,13 @@ local function PickRandomWord()
 end
 
 -- Initialize variables
-local TypeCraftFrame, TypeCraftWord, TypeCraftResult, TypeCraftInput, TypeCraftTimerText
+local TypeCraftFrame, TypeCraftWord, TypeCraftResult, TypeCraftInput, TypeCraftTimerText, TypeCraftWPMText
 local currentWords = {}
 local challengeActive = false
 local timerRunning = false
 local timerDuration = 30
+local correctCount = 0
+local errorCount = 0
 local timerRemaining = timerDuration
 local timerTicker
 
@@ -64,6 +66,8 @@ end
 
 -- Function to start a new typing challenge
 local function StartNewChallenge()
+    correctCount = 0
+    errorCount = 0
     currentWords = {}
     challengeActive = true
     timerRunning = false
@@ -77,6 +81,21 @@ local function StartNewChallenge()
     TypeCraftInput:SetFocus()
 end
 
+local function EndCurrentChallenge()
+    if timerTicker then
+        timerTicker:Cancel()
+        timerTicker = nil
+    end
+    timerRemaining = 0
+    timerRunning = false
+    challengeActive = false
+    local wordsPerMinute = math.floor((correctCount / timerDuration) * 60)
+    TypeCraftWPMText:SetText("WPM: " .. wordsPerMinute)
+    TypeCraftWord:SetText("")
+    ShowTemporaryResultMessage(" Time's up!", RED)
+end
+
+
 -- Function to update the timer display
 local function UpdateTimerDisplay()
     TypeCraftTimerText:SetText("Time: " .. timerRemaining)
@@ -84,16 +103,13 @@ end
 
 -- Function to start the timer
 local function StartTimer()
-    if timerRunning then return end
+    if timerRunning or timerTicker then return end
     timerRunning = true
     timerTicker = C_Timer.NewTicker(1, function()
         timerRemaining = timerRemaining - 1
         UpdateTimerDisplay()
         if timerRemaining <= 0 then
-            timerTicker:Cancel()
-            challengeActive = false
-            TypeCraftWord:SetText("")
-            ShowTemporaryResultMessage(" Time's up!", RED)
+            EndCurrentChallenge()
         end
     end)
 end
@@ -109,8 +125,10 @@ local function HandleWordEntry(input)
     local trimmedInput = trim(input)
     if trimmedInput:lower() == currentWords[1]:lower() then
         ShowTemporaryResultMessage("Correct!", GREEN)
+        correctCount = correctCount + 1
     else
         ShowTemporaryResultMessage("Wrong :(", RED)
+        errorCount = errorCount + 1
     end
     table.remove(currentWords, 1)
     if #currentWords == 0 then
@@ -140,6 +158,7 @@ TypeCraftFrame.title:SetText("TypeCraft")
 TypeCraftWord = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 TypeCraftWord:SetPoint("TOPRIGHT", TypeCraftFrame, "TOPRIGHT", -10, -30)
 TypeCraftWord:SetJustifyH("RIGHT")  -- Align text to the right
+TypeCraftWord:SetFont("Interface/AddOns/TypeCraft/fonts/RobotoMono.ttf", 14, "OUTLINE")
 
 -- Result message
 TypeCraftResult = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -149,6 +168,10 @@ TypeCraftResult:SetPoint("BOTTOM", 0, 10)
 TypeCraftTimerText = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 TypeCraftTimerText:SetPoint("BOTTOMLEFT", 10, 10)
 TypeCraftTimerText:SetText("Time: " .. timerDuration)
+
+TypeCraftWPMText = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+TypeCraftWPMText:SetPoint("BOTTOMRIGHT", -10, 50)
+TypeCraftWPMText:SetText("WPM: 0")
 
 -- Typing input
 TypeCraftInput = CreateFrame("EditBox", nil, TypeCraftFrame, "InputBoxTemplate")
@@ -172,7 +195,8 @@ end)
 
 -- Timer duration dropdown
 local function SetTimerDuration(value)
-    timerDuration = value
+    timerDuration = tonumber(value) or 30
+    timerRemaining = timerDuration
     TypeCraftTimerText:SetText("Time: " .. timerRemaining)
 end
 
@@ -194,7 +218,7 @@ local function InitializeDropdown(self, level)
 end
 
 TypeCraftDropdown = CreateFrame("Frame", "TypeCraftDropdown", TypeCraftFrame, "UIDropDownMenuTemplate")
-TypeCraftDropdown:SetPoint("BOTTOMRIGHT", -10, 10)
+TypeCraftDropdown:SetPoint("BOTTOMRIGHT", -5, 10)
 UIDropDownMenu_SetWidth(TypeCraftDropdown, 100)
 UIDropDownMenu_SetText(TypeCraftDropdown, "Timer")
 UIDropDownMenu_Initialize(TypeCraftDropdown, InitializeDropdown)
