@@ -93,7 +93,7 @@ local function StartTimer()
             timerTicker:Cancel()
             challengeActive = false
             TypeCraftWord:SetText("")
-            ShowTemporaryResultMessage("⏰ Time's up!", RED)
+            ShowTemporaryResultMessage(" Time's up!", RED)
         end
     end)
 end
@@ -122,7 +122,7 @@ end
 
 -- Create the main frame
 TypeCraftFrame = CreateFrame("Frame", "TypeCraftFrame", UIParent, "BasicFrameTemplateWithInset")
-TypeCraftFrame:SetSize(700, 120)
+TypeCraftFrame:SetSize(700, 160)
 TypeCraftFrame:SetPoint("CENTER")
 TypeCraftFrame:SetMovable(true)
 TypeCraftFrame:EnableMouse(true)
@@ -169,6 +169,36 @@ TypeCraftInput:SetScript("OnKeyDown", function(self, key)
         self:SetText("")
     end
 end)
+
+-- Timer duration dropdown
+local function SetTimerDuration(value)
+    timerDuration = value
+    TypeCraftTimerText:SetText("Time: " .. timerRemaining)
+end
+
+local function InitializeDropdown(self, level)
+    local info = UIDropDownMenu_CreateInfo()
+
+    for _, seconds in ipairs({15, 30, 45, 60}) do
+        info = UIDropDownMenu_CreateInfo()  -- Important: fresh info each time
+        info.text = seconds .. " seconds"
+        info.value = seconds
+        info.checked = (seconds == timerDuration)
+        info.func = function()
+            UIDropDownMenu_SetSelectedValue(self, seconds)
+            SetTimerDuration(seconds)
+            CloseDropDownMenus() -- Closes the menu after selection
+        end
+        UIDropDownMenu_AddButton(info, level)
+    end
+end
+
+TypeCraftDropdown = CreateFrame("Frame", "TypeCraftDropdown", TypeCraftFrame, "UIDropDownMenuTemplate")
+TypeCraftDropdown:SetPoint("BOTTOMRIGHT", -10, 10)
+UIDropDownMenu_SetWidth(TypeCraftDropdown, 100)
+UIDropDownMenu_SetText(TypeCraftDropdown, "Timer")
+UIDropDownMenu_Initialize(TypeCraftDropdown, InitializeDropdown)
+UIDropDownMenu_SetSelectedValue(TypeCraftDropdown, timerDuration)
 
 -- Slash command to start the game
 SLASH_TYPECRAFT1 = "/typecraft"
