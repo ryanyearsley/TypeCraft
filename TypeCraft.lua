@@ -1,6 +1,7 @@
 -- Define color constants
 local GREEN = { r = 0, g = 1, b = 0 }
 local RED = { r = 1, g = 0, b = 0 }
+local WHITE = { r = 1, g = 1, b = 1 }
 
 -- Function to pick a random word from the list
 local function PickRandomWord()
@@ -8,7 +9,7 @@ local function PickRandomWord()
 end
 
 -- Initialize variables
-local TypeCraftFrame, TypeCraftWord, TypeCraftWordNext, TypeCraftResult, TypeCraftInput, TypeCraftTimerText, TypeCraftWPMText
+local TypeCraftFrame, TypeCraftWord, TypeCraftWordNext, TypeCraftMessage, TypeCraftInput, TypeCraftTimerText, TypeCraftWPMText
 local currentWords = {}
 local nextWords = {}
 local challengeActive = false
@@ -25,12 +26,16 @@ local function trim(s)
     return s:match("^%s*(.-)%s*$")
 end
 
--- Function to show temporary result messages
-local function ShowTemporaryResultMessage(message, color)
-    TypeCraftResult:SetTextColor(color.r, color.g, color.b)
-    TypeCraftResult:SetText(message)
+local function ShowMessage(message, color)
+    TypeCraftMessage:SetTextColor(color.r, color.g, color.b)
+    TypeCraftMessage:SetText(message)
+end
+
+local function ShowTemporaryMessage(message, color)
+    TypeCraftMessage:SetTextColor(color.r, color.g, color.b)
+    TypeCraftMessage:SetText(message)
     C_Timer.After(0.3, function()
-        TypeCraftResult:SetText("")
+        TypeCraftMessage:SetText("")
     end)
 end
 
@@ -103,7 +108,7 @@ local function StartNewChallenge()
     timerRemaining = timerDuration
     TypeCraftTimerText:SetText("Time: " .. timerRemaining)
     TypeCraftWord:SetText("")
-    TypeCraftResult:SetText("")
+    ShowMessage("Time begins when you enter the first character.", WHITE)
     StartNewLine()
     TypeCraftFrame:Show()
     TypeCraftInput:SetText("")
@@ -123,7 +128,7 @@ local function EndCurrentChallenge()
     TypeCraftWPMText:SetText("WPM: " .. wpm)
     TypeCraftWord:SetText("")
     TypeCraftWordNext:SetText("")
-    ShowTemporaryResultMessage(" Time's up!", RED)
+    ShowMessage("Time's up!", WHITE)
 end
 
 
@@ -154,11 +159,11 @@ local function HandleWordEntry(input)
 
     local trimmedInput = trim(input)
     if trimmedInput:lower() == currentWords[1]:lower() then
-        ShowTemporaryResultMessage("Correct!", GREEN)
+        ShowTemporaryMessage("Correct!", GREEN)
         correctCount = correctCount + 1 
         characterCount = characterCount + #currentWords[1] + 1  -- +1 for the space
     else
-        ShowTemporaryResultMessage("Wrong :(", RED)
+        ShowTemporaryMessage("Wrong :(", RED)
         errorCount = errorCount + 1
     end
     table.remove(currentWords, 1)
@@ -196,18 +201,17 @@ TypeCraftWordNext:SetPoint("TOPRIGHT", TypeCraftFrame, "TOPRIGHT", -10, -50)
 TypeCraftWordNext:SetJustifyH("RIGHT")  -- Align text to the right
 TypeCraftWordNext:SetFont("Interface/AddOns/TypeCraft/fonts/RobotoMono.ttf", 12, "OUTLINE")
 
-
 -- Result message
-TypeCraftResult = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-TypeCraftResult:SetPoint("BOTTOM", 0, 10)
+TypeCraftMessage = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+TypeCraftMessage:SetPoint("BOTTOM", 0, 10)
 
 -- Timer display
 TypeCraftTimerText = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-TypeCraftTimerText:SetPoint("BOTTOMLEFT", 10, 10)
+TypeCraftTimerText:SetPoint("BOTTOM", 0, 55)
 TypeCraftTimerText:SetText("Time: " .. timerDuration)
 
 TypeCraftWPMText = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-TypeCraftWPMText:SetPoint("BOTTOMRIGHT", -10, 50)
+TypeCraftWPMText:SetPoint("BOTTOMRIGHT", -10, 10)
 TypeCraftWPMText:SetText("WPM: 0")
 
 -- Typing input
@@ -255,7 +259,7 @@ local function InitializeDropdown(self, level)
 end
 
 TypeCraftDropdown = CreateFrame("Frame", "TypeCraftDropdown", TypeCraftFrame, "UIDropDownMenuTemplate")
-TypeCraftDropdown:SetPoint("BOTTOMRIGHT", -5, 10)
+TypeCraftDropdown:SetPoint("BOTTOMLEFT", 5, 10)
 UIDropDownMenu_SetWidth(TypeCraftDropdown, 100)
 UIDropDownMenu_SetText(TypeCraftDropdown, "Timer")
 UIDropDownMenu_Initialize(TypeCraftDropdown, InitializeDropdown)
