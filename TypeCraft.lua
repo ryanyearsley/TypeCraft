@@ -203,7 +203,7 @@ TypeCraftWordNext:SetFont("Interface/AddOns/TypeCraft/fonts/RobotoMono.ttf", 12,
 
 -- Result message
 TypeCraftMessage = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-TypeCraftMessage:SetPoint("BOTTOM", 0, 10)
+TypeCraftMessage:SetPoint("BOTTOM", 0, 13)
 
 -- Timer display
 TypeCraftTimerText = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
