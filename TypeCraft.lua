@@ -8,8 +8,9 @@ local function PickRandomWord()
 end
 
 -- Initialize variables
-local TypeCraftFrame, TypeCraftWord, TypeCraftResult, TypeCraftInput, TypeCraftTimerText, TypeCraftWPMText
+local TypeCraftFrame, TypeCraftWord, TypeCraftWordNext, TypeCraftResult, TypeCraftInput, TypeCraftTimerText, TypeCraftWPMText
 local currentWords = {}
+local nextWords = {}
 local challengeActive = false
 local timerRunning = false
 local timerDuration = 30
@@ -40,10 +41,20 @@ local function UpdateWordDisplay()
         displayText = displayText .. word .. " "
     end
     TypeCraftWord:SetText(displayText)
+    local nextDisplayText = ""
+    for _, word in ipairs(nextWords) do
+        nextDisplayText = nextDisplayText .. word .. " "
+    end
+    TypeCraftWordNext:SetText(nextDisplayText)
 end
 
 -- Function to highlight the current word
 local function HighlightCurrentWord()
+    if not currentWords or #currentWords == 0 then
+        TypeCraftWord:SetText("")
+        return
+    end
+    
     local displayText = ""
     for i, word in ipairs(currentWords) do
         if i == 1 then
@@ -55,22 +66,38 @@ local function HighlightCurrentWord()
     TypeCraftWord:SetText(displayText)
 end
 
+local function CopyTable(source)
+    local copy = {}
+    for i, v in ipairs(source) do
+        copy[i] = v
+    end
+    return copy
+end
+
 -- Function to start a new line of words
 local function StartNewLine()
-    currentWords = {}
+    if nextWords and #nextWords > 0 then
+        currentWords = CopyTable(nextWords)
+    else
+        currentWords = {} 
+        for i = 1, 10 do
+            table.insert(currentWords, PickRandomWord())
+        end
+    end
+    nextWords = {}
     for i = 1, 10 do
-        table.insert(currentWords, PickRandomWord())
+        table.insert(nextWords, PickRandomWord())
     end
     UpdateWordDisplay()
     HighlightCurrentWord()
 end
-
 -- Function to start a new typing challenge
 local function StartNewChallenge()
     correctCount = 0
     characterCount = 0
     errorCount = 0
     currentWords = {}
+    nextWords= {}
     challengeActive = true
     timerRunning = false
     timerRemaining = timerDuration
@@ -95,6 +122,7 @@ local function EndCurrentChallenge()
     local wpm = math.floor((characterCount / 5) / timeInMinutes)
     TypeCraftWPMText:SetText("WPM: " .. wpm)
     TypeCraftWord:SetText("")
+    TypeCraftWordNext:SetText("")
     ShowTemporaryResultMessage(" Time's up!", RED)
 end
 
@@ -119,8 +147,7 @@ end
 
 -- Function to handle word entry
 local function HandleWordEntry(input)
-    if not challengeActive then return end
-
+    if not challengeActive or not currentWords or #currentWords == 0 then return end
     if not timerRunning then
         StartTimer()
     end
@@ -163,6 +190,12 @@ TypeCraftWord = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalL
 TypeCraftWord:SetPoint("TOPRIGHT", TypeCraftFrame, "TOPRIGHT", -10, -30)
 TypeCraftWord:SetJustifyH("RIGHT")  -- Align text to the right
 TypeCraftWord:SetFont("Interface/AddOns/TypeCraft/fonts/RobotoMono.ttf", 12, "OUTLINE")
+
+TypeCraftWordNext =  TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+TypeCraftWordNext:SetPoint("TOPRIGHT", TypeCraftFrame, "TOPRIGHT", -10, -50)
+TypeCraftWordNext:SetJustifyH("RIGHT")  -- Align text to the right
+TypeCraftWordNext:SetFont("Interface/AddOns/TypeCraft/fonts/RobotoMono.ttf", 12, "OUTLINE")
+
 
 -- Result message
 TypeCraftResult = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
