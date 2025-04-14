@@ -63,7 +63,7 @@ local function HighlightCurrentWord()
     local displayText = ""
     for i, word in ipairs(currentWords) do
         if i == 1 then
-            displayText = displayText .. "|cffff0000" .. word .. "|r "  -- Highlight in red
+            displayText = displayText .. "|cff4c99ff" .. word .. "|r "
         else
             displayText = displayText .. word .. " "
         end
