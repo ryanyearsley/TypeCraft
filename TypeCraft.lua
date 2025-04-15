@@ -10,7 +10,7 @@ end
 
 -- Initialize variables
 local TypeCraftFrame, TypeCraftWord, TypeCraftWordNext, TypeCraftMessage, TypeCraftInput, TypeCraftTimerText, TypeCraftWPMText
-local ResultsWPM, ResultsAccuracy, ResultsKPM, TypeCraftResultsFrame, CloseResultsButton
+local ResultsTitle, ResultsWPM, ResultsAccuracy, ResultsKPM, TypeCraftResultsFrame, CloseResultsButton
 local currentWords = {}
 local nextWords = {}
 local challengeActive = false
@@ -252,10 +252,10 @@ TypeCraftResultsFrame:SetSize(300, 150)
 TypeCraftResultsFrame:SetPoint("TOP", TypeCraftFrame, "BOTTOM", 0, -10)
 TypeCraftResultsFrame:Hide()
 
--- Results title
-ResultsTitle = TypeCraftResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
-ResultsTitle:SetPoint("TOP", 0, 0)
-ResultsTitle:SetText("Challenge Complete!")
+TypeCraftResultsFrame.title = TypeCraftResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+TypeCraftResultsFrame.title:SetPoint("CENTER", TypeCraftResultsFrame.TitleBg, "CENTER", 0, 0)
+TypeCraftResultsFrame.title:SetText("Challenge Complete!")
+
 
 -- WPM display
 ResultsWPM = TypeCraftResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
