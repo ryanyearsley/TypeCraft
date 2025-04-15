@@ -10,16 +10,19 @@ end
 
 -- Initialize variables
 local TypeCraftFrame, TypeCraftWord, TypeCraftWordNext, TypeCraftMessage, TypeCraftInput, TypeCraftTimerText, TypeCraftWPMText
+local ResultsWPM, ResultsAccuracy, ResultsKPM, TypeCraftResultsFrame, CloseResultsButton
 local currentWords = {}
 local nextWords = {}
 local challengeActive = false
 local timerRunning = false
 local timerDuration = 30
 local correctCount = 0
-local characterCount = 0;
+local characterCount = 0
+local totalKeystrokes = 0
 local errorCount = 0
 local timerRemaining = timerDuration
 local timerTicker
+local lastWPM, lastAccuracy,lastKPM
 
 -- Function to trim whitespace from input
 local function trim(s)
@@ -102,8 +105,10 @@ local function StartNewChallenge()
         timerTicker:Cancel()
         timerTicker = nil
     end
+    TypeCraftResultsFrame:Hide()
     correctCount = 0
     characterCount = 0
+    totalKeystrokes = 0
     errorCount = 0
     currentWords = {}
     nextWords= {}
@@ -129,12 +134,26 @@ local function EndCurrentChallenge()
     challengeActive = false
     local timeInMinutes = timerDuration / 60
     local wpm = math.floor((characterCount / 5) / timeInMinutes)
+    local kpm = math.floor(totalKeystrokes / timeInMinutes)
+    local accuracy = totalKeystrokes > 0 and math.floor((characterCount / totalKeystrokes) * 100) or 0
+    local chatMsg = string.format(
+        "I just scored %d WPM with %d%% accuracy and %d KPM in TypeCraft!",
+        wpm, accuracy, kpm
+    )
+    lastWPM = wpm
+    lastAccuracy = accuracy
+    lastKPM = kpm
     TypeCraftWPMText:SetText("WPM: " .. wpm)
     TypeCraftWord:SetText("")
     TypeCraftWordNext:SetText("")
     ShowMessage("Time's up!", WHITE)
-end
 
+    -- Show the results
+    ResultsWPM:SetText("Words per Minute: " .. wpm)
+    ResultsAccuracy:SetText("Accuracy: " .. accuracy .. "%")
+    ResultsKPM:SetText("Keystrokes per Minute: " .. kpm)
+    TypeCraftResultsFrame:Show()
+end
 
 -- Function to update the timer display
 local function UpdateTimerDisplay()
@@ -166,6 +185,7 @@ local function HandleWordEntry(input)
         ShowTemporaryMessage("Wrong :(", RED)
         errorCount = errorCount + 1
     end
+    totalKeystrokes = totalKeystrokes + #currentWords[1] + 1
     table.remove(currentWords, 1)
     if #currentWords == 0 then
         StartNewLine()
@@ -176,7 +196,7 @@ end
 
 -- Create the main frame
 TypeCraftFrame = CreateFrame("Frame", "TypeCraftFrame", UIParent, "BasicFrameTemplateWithInset")
-TypeCraftFrame:SetSize(900, 160)
+TypeCraftFrame:SetSize(700, 160)
 TypeCraftFrame:SetPoint("CENTER")
 TypeCraftFrame:SetMovable(true)
 TypeCraftFrame:EnableMouse(true)
@@ -213,6 +233,50 @@ TypeCraftTimerText:SetText("Time: " .. timerDuration)
 TypeCraftWPMText = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 TypeCraftWPMText:SetPoint("BOTTOMRIGHT", -10, 10)
 TypeCraftWPMText:SetText("WPM: 0")
+
+-- Post-game results frame
+TypeCraftResultsFrame = CreateFrame("Frame", "TypeCraftResultsFrame", TypeCraftFrame, "BasicFrameTemplateWithInset")
+TypeCraftResultsFrame:SetSize(300, 150)
+TypeCraftResultsFrame:SetPoint("BOTTOM", TypeCraftFrame, "TOP", 0, 10)
+TypeCraftResultsFrame:Hide()
+
+-- Results title
+ResultsTitle = TypeCraftResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
+ResultsTitle:SetPoint("TOP", 0, -20)
+ResultsTitle:SetText("Challenge Complete!")
+
+-- WPM display
+ResultsWPM = TypeCraftResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+ResultsWPM:SetPoint("TOPLEFT", 15, -45)
+
+-- Accuracy display
+ResultsAccuracy = TypeCraftResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+ResultsAccuracy:SetPoint("TOPLEFT", 15, -65)
+
+-- KPM display
+ResultsKPM = TypeCraftResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+ResultsKPM:SetPoint("TOPLEFT", 15, -85)
+
+-- Close button
+CloseResultsButton = CreateFrame("Button", nil, TypeCraftResultsFrame, "UIPanelButtonTemplate")
+CloseResultsButton:SetSize(80, 22)
+CloseResultsButton:SetPoint("BOTTOM", -50, 10)
+CloseResultsButton:SetText("Close")
+CloseResultsButton:SetScript("OnClick", function()
+    TypeCraftResultsFrame:Hide()
+end)
+local ShareButton = CreateFrame("Button", nil, TypeCraftResultsFrame, "UIPanelButtonTemplate")
+ShareButton:SetSize(80, 22)
+ShareButton:SetPoint("BOTTOM", 50, 10)
+ShareButton:SetText("Share")
+ShareButton:SetScript("OnClick", function()
+    local chatMsg = string.format(
+        "I just scored %d WPM with %d%% accuracy and %d KPM in TypeCraft!",
+        lastWPM or 0, lastAccuracy or 0, lastKPM or 0
+    )
+    SendChatMessage(chatMsg, "SAY")  -- Change "GUILD" to "PARTY", "SAY", etc. as needed
+end)
+
 
 -- Typing input
 TypeCraftInput = CreateFrame("EditBox", nil, TypeCraftFrame, "InputBoxTemplate")
@@ -282,6 +346,21 @@ ResetButton:SetScript("OnClick", function()
     end
     StartNewChallenge()
 end)
+chatMsg = string.format(
+    "I just scored %d WPM with %d%% accuracy and %d KPM in TypeCraft!",
+    wpm, accuracy, kpm
+)
+
+function SafeSendChat(msg, channel)
+    if not InCombatLockdown() and msg and msg ~= "" then
+        local success, err = pcall(function()
+            SendChatMessage(msg, channel or "SAY")
+        end)
+        if not success then
+            print("|cffff0000TypeCraft: Failed to send message.|r")
+        end
+    end
+end
 
 -- Slash command to start the game
 SLASH_TYPECRAFT1 = "/typecraft"
