@@ -98,6 +98,10 @@ local function StartNewLine()
 end
 -- Function to start a new typing challenge
 local function StartNewChallenge()
+    if timerTicker then
+        timerTicker:Cancel()
+        timerTicker = nil
+    end
     correctCount = 0
     characterCount = 0
     errorCount = 0
@@ -153,10 +157,6 @@ end
 -- Function to handle word entry
 local function HandleWordEntry(input)
     if not challengeActive or not currentWords or #currentWords == 0 then return end
-    if not timerRunning then
-        StartTimer()
-    end
-
     local trimmedInput = trim(input)
     if trimmedInput:lower() == currentWords[1]:lower() then
         ShowTemporaryMessage("Correct!", GREEN)
@@ -226,6 +226,11 @@ TypeCraftInput:SetScript("OnEnterPressed", function(self)
 end)
 TypeCraftInput:SetScript("OnEscapePressed", function(self)
     self:ClearFocus()
+end)
+TypeCraftInput:SetScript("OnTextChanged", function(self)
+    if not timerRunning and trim(self:GetText()) ~= "" then
+        StartTimer()
+    end
 end)
 TypeCraftInput:SetScript("OnKeyDown", function(self, key)
     if key == "SPACE" then
