@@ -177,10 +177,13 @@ local function StartTimer()
     if timerRunning or timerTicker then return end
     timerRunning = true
     timerTicker = C_Timer.NewTicker(1, function()
-        timerRemaining = timerRemaining - 1
-        UpdateTimerDisplay()
-        if timerRemaining <= 0 then
+        if timerRemaining <= 1 then
+            timerRemaining = 0
+            UpdateTimerDisplay()
             EndCurrentChallenge()
+        else
+            timerRemaining = timerRemaining - 1
+            UpdateTimerDisplay()
         end
     end)
 end
