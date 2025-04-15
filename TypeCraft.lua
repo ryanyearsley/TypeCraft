@@ -81,21 +81,33 @@ local function CopyTable(source)
     end
     return copy
 end
+local MAX_CHAR_WIDTH = 80  -- Adjust based on your frame/font
 
--- Function to start a new line of words
+local function BuildWordLine()
+    local line = {}
+    local charCount = 0
+
+    while true do
+        local word = PickRandomWord()
+        local wordLength = #word + 1  -- +1 for space
+        if charCount + wordLength > MAX_CHAR_WIDTH then break end
+        table.insert(line, word)
+        charCount = charCount + wordLength
+    end
+
+    return line
+end
+
 local function StartNewLine()
+    -- Promote nextWords to currentWords if it exists
     if nextWords and #nextWords > 0 then
         currentWords = CopyTable(nextWords)
     else
-        currentWords = {} 
-        for i = 1, 10 do
-            table.insert(currentWords, PickRandomWord())
-        end
+        currentWords = BuildWordLine()
     end
-    nextWords = {}
-    for i = 1, 10 do
-        table.insert(nextWords, PickRandomWord())
-    end
+
+    nextWords = BuildWordLine()
+
     UpdateWordDisplay()
     HighlightCurrentWord()
 end
@@ -207,17 +219,17 @@ TypeCraftFrame:Hide()
 
 -- Set the frame title
 TypeCraftFrame.title = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-TypeCraftFrame.title:SetPoint("LEFT", TypeCraftFrame.TitleBg, "LEFT", 5, 0)
+TypeCraftFrame.title:SetPoint("CENTER", TypeCraftFrame.TitleBg, "CENTER", 0, 0)
 TypeCraftFrame.title:SetText("TypeCraft")
 
 -- Word display
 TypeCraftWord = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-TypeCraftWord:SetPoint("TOPRIGHT", TypeCraftFrame, "TOPRIGHT", -10, -30)
+TypeCraftWord:SetPoint("TOPRIGHT", TypeCraftFrame, "TOPRIGHT", -10, -50)
 TypeCraftWord:SetJustifyH("RIGHT")  -- Align text to the right
 TypeCraftWord:SetFont("Interface/AddOns/TypeCraft/fonts/RobotoMono.ttf", 12, "OUTLINE")
 
 TypeCraftWordNext =  TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-TypeCraftWordNext:SetPoint("TOPRIGHT", TypeCraftFrame, "TOPRIGHT", -10, -50)
+TypeCraftWordNext:SetPoint("TOPRIGHT", TypeCraftFrame, "TOPRIGHT", -10, -70)
 TypeCraftWordNext:SetJustifyH("RIGHT")  -- Align text to the right
 TypeCraftWordNext:SetFont("Interface/AddOns/TypeCraft/fonts/RobotoMono.ttf", 12, "OUTLINE")
 
@@ -237,12 +249,12 @@ TypeCraftWPMText:SetText("WPM: 0")
 -- Post-game results frame
 TypeCraftResultsFrame = CreateFrame("Frame", "TypeCraftResultsFrame", TypeCraftFrame, "BasicFrameTemplateWithInset")
 TypeCraftResultsFrame:SetSize(300, 150)
-TypeCraftResultsFrame:SetPoint("BOTTOM", TypeCraftFrame, "TOP", 0, 10)
+TypeCraftResultsFrame:SetPoint("TOP", TypeCraftFrame, "BOTTOM", 0, -10)
 TypeCraftResultsFrame:Hide()
 
 -- Results title
 ResultsTitle = TypeCraftResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
-ResultsTitle:SetPoint("TOP", 0, -20)
+ResultsTitle:SetPoint("TOP", 0, 0)
 ResultsTitle:SetText("Challenge Complete!")
 
 -- WPM display
@@ -322,6 +334,7 @@ local function InitializeDropdown(self, level)
             UIDropDownMenu_SetSelectedValue(self, seconds)
             SetTimerDuration(seconds)
             CloseDropDownMenus() -- Closes the menu after selection
+            StartNewChallenge()
         end
         UIDropDownMenu_AddButton(info, level)
     end
