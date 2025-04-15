@@ -265,6 +265,20 @@ UIDropDownMenu_SetText(TypeCraftDropdown, "Timer")
 UIDropDownMenu_Initialize(TypeCraftDropdown, InitializeDropdown)
 UIDropDownMenu_SetSelectedValue(TypeCraftDropdown, timerDuration)
 
+-- Reset button
+local ResetButton = CreateFrame("Button", nil, TypeCraftFrame, "UIPanelButtonTemplate")
+ResetButton:SetSize(80, 22)
+ResetButton:SetPoint("BOTTOMLEFT", 40, 45)  -- Above the dropdown
+ResetButton:SetText("Reset")
+ResetButton:SetScript("OnClick", function()
+    if timerTicker then
+        timerTicker:Cancel()
+        timerTicker = nil
+    end
+    StartNewChallenge()
+end)
+
 -- Slash command to start the game
 SLASH_TYPECRAFT1 = "/typecraft"
+SLASH_TYPECRAFT2 = "/tc"
 SlashCmdList["TYPECRAFT"] = StartNewChallenge
