@@ -30,6 +30,8 @@ local totalKeystrokes = 0
 local errorCount = 0
 local timerRemaining = timerDuration
 local timerTicker
+local bestAllTimeWPM = 0
+local bestSessionWPM = 0
 local lastWPM, lastAccuracy,lastKPM
 local selectedChannel = "SAY" -- default
 
@@ -164,7 +166,11 @@ local function EndCurrentChallenge()
     lastWPM = wpm
     lastAccuracy = accuracy
     lastKPM = kpm
-    TypeCraftWPMText:SetText("WPM: " .. wpm)
+    TypeCraftWPMText:SetText("WPM (Last): " .. wpm)
+    if (wpm > bestSessionWPM) then
+        bestSessionWPM = wpm
+        BestResultsWPMText:SetText("WPM (Best): " .. bestSessionWPM)
+    end
     TypeCraftWord:SetText("")
     TypeCraftWordNext:SetText("")
     ShowMessage("Time's up!", WHITE)
@@ -219,7 +225,7 @@ local function HandleWordEntry(input)
 end
 
 -- Create the main frame
-TypeCraftFrame = CreateFrame("Frame", "TypeCraftFrame", UIParent, "BasicFrameTemplateWithInset")
+TypeCraftFrame = CreateFrame("Frame", "TypeCraftFrame", UIParent, "BackdropTemplate")
 TypeCraftFrame:SetSize(700, 160)
 TypeCraftFrame:SetPoint("CENTER")
 TypeCraftFrame:SetMovable(true)
@@ -228,12 +234,22 @@ TypeCraftFrame:RegisterForDrag("LeftButton")
 TypeCraftFrame:SetScript("OnDragStart", TypeCraftFrame.StartMoving)
 TypeCraftFrame:SetScript("OnDragStop", TypeCraftFrame.StopMovingOrSizing)
 TypeCraftFrame:Hide()
+TypeCraftFrame:SetBackdrop({
+    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+    tile = true, tileSize = 32, edgeSize = 32,
+    insets = { left = 8, right = 8, top = 8, bottom = 8 }
+})
 
+closeButton = CreateFrame("Button", nil, TypeCraftFrame, "UIPanelCloseButton")
+closeButton:SetPoint("TOPRIGHT", TypeCraftFrame, "TOPRIGHT", -6, -6)
+closeButton:SetScale(0.8) -- optional, makes the button a bit smaller
+
+TypeCraftFrame:SetBackdropColor(0, 0, 0, 0.6) -- Last value is alpha
 -- Set the frame title
 TypeCraftFrame.title = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-TypeCraftFrame.title:SetPoint("CENTER", TypeCraftFrame.TitleBg, "CENTER", 0, 0)
+TypeCraftFrame.title:SetPoint("CENTER", TypeCraftFrame, "TOP", 0, -20)
 TypeCraftFrame.title:SetText("TypeCraft")
-
 -- Word display
 TypeCraftWord = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 TypeCraftWord:SetPoint("TOPRIGHT", TypeCraftFrame, "TOPRIGHT", -10, -50)
@@ -256,19 +272,21 @@ TypeCraftTimerText:SetText("Time: " .. timerDuration)
 
 TypeCraftWPMText = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 TypeCraftWPMText:SetPoint("BOTTOMRIGHT", -10, 10)
-TypeCraftWPMText:SetText("WPM: 0")
+TypeCraftWPMText:SetText("WPM (Last): 0")
 
+BestResultsWPMText = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+BestResultsWPMText:SetPoint("BOTTOMRIGHT", -10, 25)
+BestResultsWPMText:SetText("WPM (Best): 0")
 -- Post-game results frame
 TypeCraftResultsFrame = CreateFrame("Frame", "TypeCraftResultsFrame", TypeCraftFrame, "BasicFrameTemplateWithInset")
 TypeCraftResultsFrame:SetSize(300, 160)
 TypeCraftResultsFrame:SetPoint("LEFT", TypeCraftFrame, "RIGHT", 5, 0)
 TypeCraftResultsFrame:Hide()
-
 TypeCraftResultsFrame.title = TypeCraftResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 TypeCraftResultsFrame.title:SetPoint("CENTER", TypeCraftResultsFrame.TitleBg, "CENTER", 0, 0)
 TypeCraftResultsFrame.title:SetText("Challenge Complete!")
-
 -- WPM display
+
 ResultsWPM = TypeCraftResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 ResultsWPM:SetPoint("TOPLEFT", 15, -45)
 
