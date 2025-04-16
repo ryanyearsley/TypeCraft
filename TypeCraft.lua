@@ -10,16 +10,10 @@ local shareChannels = {
     { text = "Guild", value = "GUILD" },
 }
 
-
--- Function to pick a random word from the list
-local function PickRandomWord()
-    return TypeCraftWords[math.random(#TypeCraftWords)]
-end
-
 -- Initialize variables
 local TypeCraftFrame, TypeCraftWord, TypeCraftWordNext, TypeCraftMessage, TypeCraftInput, TypeCraftTimerText, TypeCraftWPMText
 local floatingFeedback, animGroup, moveUp, fadeOut
-local ResultsTitle, ResultsWPM, ResultsAccuracy, ResultsKPM, TypeCraftResultsFrame, CloseResultsButton
+local ResultsWPM, ResultsAccuracy, ResultsKPM, TypeCraftResultsFrame, CloseResultsButton
 local currentWords = {}
 local nextWords = {}
 local challengeActive = false
@@ -37,8 +31,6 @@ local lastWPM, lastAccuracy,lastKPM
 local selectedChannel = "SAY" -- default
 -- Constants
 local CHAR_WIDTH = 8  -- approximate width of one character in pixels (adjust if needed)
-local LINE_PADDING = 5
-
 
 -- Function to trim whitespace from input
 local function trim(s)
