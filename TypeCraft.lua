@@ -18,6 +18,7 @@ end
 
 -- Initialize variables
 local TypeCraftFrame, TypeCraftWord, TypeCraftWordNext, TypeCraftMessage, TypeCraftInput, TypeCraftTimerText, TypeCraftWPMText
+local floatingFeedback, animGroup, moveUp, fadeOut
 local ResultsTitle, ResultsWPM, ResultsAccuracy, ResultsKPM, TypeCraftResultsFrame, CloseResultsButton
 local currentWords = {}
 local nextWords = {}
@@ -34,6 +35,10 @@ local bestAllTimeWPM = 0
 local bestSessionWPM = 0
 local lastWPM, lastAccuracy,lastKPM
 local selectedChannel = "SAY" -- default
+-- Constants
+local CHAR_WIDTH = 8  -- approximate width of one character in pixels (adjust if needed)
+local LINE_PADDING = 5
+
 
 -- Function to trim whitespace from input
 local function trim(s)
@@ -203,6 +208,54 @@ local function StartTimer()
     end)
 end
 
+local function ShowFloatingWordFeedback(word, playerTyped)
+    local wasCorrect = word == playerTyped
+
+    local r, g, b = 0, 1, 0 -- green
+    if not wasCorrect then
+        r, g, b = 1, 0, 0 -- red
+    end
+
+    floatingFeedback:SetFontObject(TypeCraftWord:GetFontObject())
+    floatingFeedback:SetText(playerTyped)
+    floatingFeedback:SetTextColor(r, g, b)
+
+    -- Calculate total width of remaining text
+    local fullText = table.concat(currentWords, " ")
+    local fullTextWidth = string.len(fullText) * CHAR_WIDTH
+    local wordIndex = nil
+    for i, w in ipairs(currentWords) do
+        if w == word then
+            wordIndex = i
+            break
+        end
+    end
+
+    if not wordIndex then
+        -- Word not found; handle accordingly
+        return
+    end
+    -- Calculate the number of characters after the word
+    local afterChars = 0
+    for i = wordIndex + 1, #currentWords do
+        afterChars = afterChars + string.len(currentWords[i]) + 1  -- word + space
+    end
+
+    -- Offset from center, working backwards from the full string width
+    local wordLength = string.len(playerTyped)
+    local wordOffsetPixels = afterChars * CHAR_WIDTH + (wordLength * CHAR_WIDTH / 2)
+
+    local centerX, centerY = TypeCraftWord:GetCenter()
+    local wordX = centerX + (fullTextWidth / 2) - wordOffsetPixels
+
+    floatingFeedback:ClearAllPoints()
+    floatingFeedback:SetPoint("CENTER", UIParent, "BOTTOMLEFT", wordX, centerY)
+    floatingFeedback:SetAlpha(1)
+    floatingFeedback:Show()
+
+    animGroup:Stop()
+    animGroup:Play()
+end
 -- Function to handle word entry
 local function HandleWordEntry(input)
     if not challengeActive or not currentWords or #currentWords == 0 then return end
@@ -215,6 +268,7 @@ local function HandleWordEntry(input)
         ShowTemporaryMessage("Wrong :(", RED)
         errorCount = errorCount + 1
     end
+    ShowFloatingWordFeedback(currentWords[1], trimmedInput)
     totalKeystrokes = totalKeystrokes + #currentWords[1] + 1
     table.remove(currentWords, 1)
     if #currentWords == 0 then
@@ -273,6 +327,31 @@ TypeCraftTimerText:SetText("Time: " .. timerDuration)
 TypeCraftWPMText = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 TypeCraftWPMText:SetPoint("BOTTOMRIGHT", -10, 10)
 TypeCraftWPMText:SetText("WPM (Last): 0")
+-- Floating feedback text
+floatingFeedback = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+floatingFeedback:SetFont("Interface/AddOns/TypeCraft/fonts/RobotoMono.ttf", 12, "OUTLINE")
+floatingFeedback:SetPoint("CENTER") -- initial position (will update per use)
+floatingFeedback:Hide()
+
+-- Create animation group
+animGroup = floatingFeedback:CreateAnimationGroup()
+
+-- Move up
+moveUp = animGroup:CreateAnimation("Translation")
+moveUp:SetOffset(0, 30)
+moveUp:SetDuration(1)
+
+-- Fade out
+fadeOut = animGroup:CreateAnimation("Alpha")
+fadeOut:SetFromAlpha(1)
+fadeOut:SetToAlpha(0)
+fadeOut:SetDuration(1)
+
+-- Hide on finish
+animGroup:SetScript("OnFinished", function()
+    floatingFeedback:Hide()
+end)
+
 
 BestResultsWPMText = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 BestResultsWPMText:SetPoint("BOTTOMRIGHT", -10, 25)
