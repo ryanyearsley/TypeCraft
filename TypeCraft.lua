@@ -1,7 +1,15 @@
--- Define color constants
+-- Define constants
 local GREEN = { r = 0, g = 1, b = 0 }
 local RED = { r = 1, g = 0, b = 0 }
 local WHITE = { r = 1, g = 1, b = 1 }
+
+local shareChannels = {
+    { text = "Say", value = "SAY" },
+    { text = "Party", value = "PARTY" },
+    { text = "Raid", value = "RAID" },
+    { text = "Guild", value = "GUILD" },
+}
+
 
 -- Function to pick a random word from the list
 local function PickRandomWord()
@@ -23,6 +31,7 @@ local errorCount = 0
 local timerRemaining = timerDuration
 local timerTicker
 local lastWPM, lastAccuracy,lastKPM
+local selectedChannel = "SAY" -- default
 
 -- Function to trim whitespace from input
 local function trim(s)
@@ -251,14 +260,13 @@ TypeCraftWPMText:SetText("WPM: 0")
 
 -- Post-game results frame
 TypeCraftResultsFrame = CreateFrame("Frame", "TypeCraftResultsFrame", TypeCraftFrame, "BasicFrameTemplateWithInset")
-TypeCraftResultsFrame:SetSize(300, 150)
-TypeCraftResultsFrame:SetPoint("TOP", TypeCraftFrame, "BOTTOM", 0, -10)
+TypeCraftResultsFrame:SetSize(300, 160)
+TypeCraftResultsFrame:SetPoint("LEFT", TypeCraftFrame, "RIGHT", 5, 0)
 TypeCraftResultsFrame:Hide()
 
 TypeCraftResultsFrame.title = TypeCraftResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 TypeCraftResultsFrame.title:SetPoint("CENTER", TypeCraftResultsFrame.TitleBg, "CENTER", 0, 0)
 TypeCraftResultsFrame.title:SetText("Challenge Complete!")
-
 
 -- WPM display
 ResultsWPM = TypeCraftResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -274,24 +282,28 @@ ResultsKPM:SetPoint("TOPLEFT", 15, -85)
 
 -- Close button
 CloseResultsButton = CreateFrame("Button", nil, TypeCraftResultsFrame, "UIPanelButtonTemplate")
-CloseResultsButton:SetSize(80, 22)
-CloseResultsButton:SetPoint("BOTTOM", -50, 10)
+CloseResultsButton:SetSize(60, 22)
+CloseResultsButton:SetPoint("BOTTOM", -30, 10)
 CloseResultsButton:SetText("Close")
 CloseResultsButton:SetScript("OnClick", function()
     TypeCraftResultsFrame:Hide()
 end)
 local ShareButton = CreateFrame("Button", nil, TypeCraftResultsFrame, "UIPanelButtonTemplate")
-ShareButton:SetSize(80, 22)
-ShareButton:SetPoint("BOTTOM", 50, 10)
+ShareButton:SetSize(60, 22)
+ShareButton:SetPoint("BOTTOM", 30, 10)
 ShareButton:SetText("Share")
 ShareButton:SetScript("OnClick", function()
-    local chatMsg = string.format(
+        local chatMsg = string.format(
         "I just scored %d WPM with %d%% accuracy and %d KPM in TypeCraft!",
         lastWPM or 0, lastAccuracy or 0, lastKPM or 0
     )
-    SendChatMessage(chatMsg, "SAY")  -- Change "GUILD" to "PARTY", "SAY", etc. as needed
-end)
+    SendChatMessage(chatMsg, selectedChannel)
+    end)
 
+local shareChannelDropdown = CreateFrame("Frame", "MyAddon_ShareChannelDropdown", ShareButton, "UIDropDownMenuTemplate")
+shareChannelDropdown:SetPoint("BOTTOMRIGHT", TypeCraftResultsFrame, "BOTTOMRIGHT", 10, 0)
+UIDropDownMenu_SetWidth(shareChannelDropdown, 60)
+UIDropDownMenu_SetText(shareChannelDropdown, "Say") -- default
 
 -- Typing input
 TypeCraftInput = CreateFrame("EditBox", nil, TypeCraftFrame, "InputBoxTemplate")
@@ -349,6 +361,18 @@ UIDropDownMenu_SetWidth(TypeCraftDropdown, 100)
 UIDropDownMenu_SetText(TypeCraftDropdown, "Timer")
 UIDropDownMenu_Initialize(TypeCraftDropdown, InitializeDropdown)
 UIDropDownMenu_SetSelectedValue(TypeCraftDropdown, timerDuration)
+UIDropDownMenu_Initialize(shareChannelDropdown, function(self, level)
+    for _, option in ipairs(shareChannels) do
+        local info = UIDropDownMenu_CreateInfo()
+        info.text = option.text
+        info.value = option.value
+        info.func = function()
+            selectedChannel = option.value
+            UIDropDownMenu_SetText(shareChannelDropdown, option.text)
+        end
+        UIDropDownMenu_AddButton(info, level)
+    end
+end)
 
 -- Reset button
 local ResetButton = CreateFrame("Button", nil, TypeCraftFrame, "UIPanelButtonTemplate")
