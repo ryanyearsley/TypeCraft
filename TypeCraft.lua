@@ -1,8 +1,12 @@
--- Define constants
+
+------------------------------------------------------------------------CONSTANTS------------------------------------------------------------------------
 local GREEN = { r = 0, g = 1, b = 0 }
 local RED = { r = 1, g = 0, b = 0 }
 local WHITE = { r = 1, g = 1, b = 1 }
 
+-- Constants
+local MAX_LINE_WIDTH = 80  -- Adjust based on your frame/font
+local CHAR_WIDTH = 8  -- approximate width of one character in pixels (adjust if needed)
 local shareChannels = {
     { text = "Say", value = "SAY" },
     { text = "Party", value = "PARTY" },
@@ -10,43 +14,47 @@ local shareChannels = {
     { text = "Guild", value = "GUILD" },
 }
 
--- Initialize variables
-local TypeCraftFrame, TypeCraftWord, TypeCraftWordNext, TypeCraftMessage, TypeCraftInput, TypeCraftTimerText, TypeCraftWPMText
+------------------------------------------------------------------------INITIALIZATION------------------------------------------------------------------------
+
+--ui
+local mainFrame, mainCloseButton, currentLineText, nextLineText, messageText, inputField, resetButton
+local timerText, lastWpmText, bestSessionWpmText
 local floatingFeedback, animGroup, moveUp, fadeOut
-local ResultsWPM, ResultsAccuracy, ResultsKPM, TypeCraftResultsFrame, CloseResultsButton
+local resultsFrame, resultsCloseButton, resultsWpmText, resultsAccuracyText, resultsKpmText, shareButton, shareChannelDropdown
+local timerDropdown
+--core game logic
 local currentWords = {}
 local nextWords = {}
 local challengeActive = false
 local timerRunning = false
-local timerDuration = 30
+--results stuff
 local correctCount = 0
 local characterCount = 0
 local totalKeystrokes = 0
 local errorCount = 0
-local timerRemaining = timerDuration
-local timerTicker
-local bestAllTimeWPM = 0
 local bestSessionWPM = 0
-local lastWPM, lastAccuracy,lastKPM
+local lastWPM, lastAccuracy, lastKPM
+--settings
+local timerDuration = 30
 local selectedChannel = "SAY" -- default
--- Constants
-local CHAR_WIDTH = 8  -- approximate width of one character in pixels (adjust if needed)
 
+
+------------------------------------------------------------------------CORE LOGIC------------------------------------------------------------------------
 -- Function to trim whitespace from input
 local function trim(s)
     return s:match("^%s*(.-)%s*$")
 end
 
 local function ShowMessage(message, color)
-    TypeCraftMessage:SetTextColor(color.r, color.g, color.b)
-    TypeCraftMessage:SetText(message)
+    messageText:SetTextColor(color.r, color.g, color.b)
+    messageText:SetText(message)
 end
 
 local function ShowTemporaryMessage(message, color)
-    TypeCraftMessage:SetTextColor(color.r, color.g, color.b)
-    TypeCraftMessage:SetText(message)
+    messageText:SetTextColor(color.r, color.g, color.b)
+    messageText:SetText(message)
     C_Timer.After(0.3, function()
-        TypeCraftMessage:SetText("")
+        messageText:SetText("")
     end)
 end
 
@@ -56,18 +64,18 @@ local function UpdateWordDisplay()
     for _, word in ipairs(currentWords) do
         displayText = displayText .. word .. " "
     end
-    TypeCraftWord:SetText(displayText)
+    currentLineText:SetText(displayText)
     local nextDisplayText = ""
     for _, word in ipairs(nextWords) do
         nextDisplayText = nextDisplayText .. word .. " "
     end
-    TypeCraftWordNext:SetText(nextDisplayText)
+    nextLineText:SetText(nextDisplayText)
 end
 
 -- Function to highlight the current word
 local function HighlightCurrentWord()
     if not currentWords or #currentWords == 0 then
-        TypeCraftWord:SetText("")
+        currentLineText:SetText("")
         return
     end
     
@@ -79,7 +87,7 @@ local function HighlightCurrentWord()
             displayText = displayText .. word .. " "
         end
     end
-    TypeCraftWord:SetText(displayText)
+    currentLineText:SetText(displayText)
 end
 
 local function CopyTable(source)
@@ -89,7 +97,6 @@ local function CopyTable(source)
     end
     return copy
 end
-local MAX_CHAR_WIDTH = 80  -- Adjust based on your frame/font
 
 local function BuildWordLine()
     local line = {}
@@ -98,7 +105,7 @@ local function BuildWordLine()
     while true do
         local word = PickRandomWord()
         local wordLength = #word + 1  -- +1 for space
-        if charCount + wordLength > MAX_CHAR_WIDTH then break end
+        if charCount + wordLength > MAX_LINE_WIDTH then break end
         table.insert(line, word)
         charCount = charCount + wordLength
     end
@@ -125,7 +132,7 @@ local function StartNewChallenge()
         timerTicker:Cancel()
         timerTicker = nil
     end
-    TypeCraftResultsFrame:Hide()
+    resultsFrame:Hide()
     correctCount = 0
     characterCount = 0
     totalKeystrokes = 0
@@ -135,13 +142,13 @@ local function StartNewChallenge()
     challengeActive = true
     timerRunning = false
     timerRemaining = timerDuration
-    TypeCraftTimerText:SetText("Time: " .. timerRemaining)
-    TypeCraftWord:SetText("")
+    timerText:SetText("Time: " .. timerRemaining)
+    currentLineText:SetText("")
     ShowMessage("Time begins when you enter the first character.", WHITE)
     StartNewLine()
-    TypeCraftFrame:Show()
-    TypeCraftInput:SetText("")
-    TypeCraftInput:SetFocus()
+    mainFrame:Show()
+    inputField:SetText("")
+    inputField:SetFocus()
 end
 
 local function EndCurrentChallenge()
@@ -163,25 +170,25 @@ local function EndCurrentChallenge()
     lastWPM = wpm
     lastAccuracy = accuracy
     lastKPM = kpm
-    TypeCraftWPMText:SetText("WPM (Last): " .. wpm)
+    lastWpmText:SetText("WPM (Last): " .. wpm)
     if (wpm > bestSessionWPM) then
         bestSessionWPM = wpm
-        BestResultsWPMText:SetText("WPM (Best): " .. bestSessionWPM)
+        bestSessionWpmText:SetText("WPM (Best): " .. bestSessionWPM)
     end
-    TypeCraftWord:SetText("")
-    TypeCraftWordNext:SetText("")
+    currentLineText:SetText("")
+    nextLineText:SetText("")
     ShowMessage("Time's up!", WHITE)
 
     -- Show the results
-    ResultsWPM:SetText("Words per Minute: " .. wpm)
-    ResultsAccuracy:SetText("Accuracy: " .. accuracy .. "%")
-    ResultsKPM:SetText("Keystrokes per Minute: " .. kpm)
-    TypeCraftResultsFrame:Show()
+    resultsWpmText:SetText("Words per Minute: " .. wpm)
+    resultsAccuracyText:SetText("Accuracy: " .. accuracy .. "%")
+    resultsKpmText:SetText("Keystrokes per Minute: " .. kpm)
+    resultsFrame:Show()
 end
 
 -- Function to update the timer display
 local function UpdateTimerDisplay()
-    TypeCraftTimerText:SetText("Time: " .. timerRemaining)
+    timerText:SetText("Time: " .. timerRemaining)
 end
 
 -- Function to start the timer
@@ -208,7 +215,7 @@ local function ShowFloatingWordFeedback(word, playerTyped)
         r, g, b = 1, 0, 0 -- red
     end
 
-    floatingFeedback:SetFontObject(TypeCraftWord:GetFontObject())
+    floatingFeedback:SetFontObject(currentLineText:GetFontObject())
     floatingFeedback:SetText(playerTyped)
     floatingFeedback:SetTextColor(r, g, b)
 
@@ -237,7 +244,7 @@ local function ShowFloatingWordFeedback(word, playerTyped)
     local wordLength = string.len(playerTyped)
     local wordOffsetPixels = afterChars * CHAR_WIDTH + (wordLength * CHAR_WIDTH / 2)
 
-    local centerX, centerY = TypeCraftWord:GetCenter()
+    local centerX, centerY = currentLineText:GetCenter()
     local wordX = centerX + (fullTextWidth / 2) - wordOffsetPixels
 
     floatingFeedback:ClearAllPoints()
@@ -270,57 +277,73 @@ local function HandleWordEntry(input)
     end
 end
 
+------------------------------------------------------------------------MAIN UI------------------------------------------------------------------------
 -- Create the main frame
-TypeCraftFrame = CreateFrame("Frame", "TypeCraftFrame", UIParent, "BackdropTemplate")
-TypeCraftFrame:SetSize(700, 160)
-TypeCraftFrame:SetPoint("CENTER")
-TypeCraftFrame:SetMovable(true)
-TypeCraftFrame:EnableMouse(true)
-TypeCraftFrame:RegisterForDrag("LeftButton")
-TypeCraftFrame:SetScript("OnDragStart", TypeCraftFrame.StartMoving)
-TypeCraftFrame:SetScript("OnDragStop", TypeCraftFrame.StopMovingOrSizing)
-TypeCraftFrame:Hide()
-TypeCraftFrame:SetBackdrop({
+mainFrame = CreateFrame("Frame", "TypeCraftFrame", UIParent, "BackdropTemplate")
+mainFrame:SetSize(700, 160)
+mainFrame:SetPoint("CENTER")
+mainFrame:SetMovable(true)
+mainFrame:EnableMouse(true)
+mainFrame:RegisterForDrag("LeftButton")
+mainFrame:SetScript("OnDragStart", mainFrame.StartMoving)
+mainFrame:SetScript("OnDragStop", mainFrame.StopMovingOrSizing)
+mainFrame:Hide()
+mainFrame:SetBackdrop({
     bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
     edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
     tile = true, tileSize = 32, edgeSize = 32,
     insets = { left = 8, right = 8, top = 8, bottom = 8 }
 })
-
-closeButton = CreateFrame("Button", nil, TypeCraftFrame, "UIPanelCloseButton")
-closeButton:SetPoint("TOPRIGHT", TypeCraftFrame, "TOPRIGHT", -6, -6)
-closeButton:SetScale(0.8) -- optional, makes the button a bit smaller
-
-TypeCraftFrame:SetBackdropColor(0, 0, 0, 0.6) -- Last value is alpha
+mainFrame:SetBackdropColor(0, 0, 0, 0.6) -- Last value is alpha
 -- Set the frame title
-TypeCraftFrame.title = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-TypeCraftFrame.title:SetPoint("CENTER", TypeCraftFrame, "TOP", 0, -20)
-TypeCraftFrame.title:SetText("TypeCraft")
--- Word display
-TypeCraftWord = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-TypeCraftWord:SetPoint("TOPRIGHT", TypeCraftFrame, "TOPRIGHT", -10, -50)
-TypeCraftWord:SetJustifyH("RIGHT")  -- Align text to the right
-TypeCraftWord:SetFont("Interface/AddOns/TypeCraft/fonts/RobotoMono.ttf", 12, "OUTLINE")
+mainFrame.title = mainFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+mainFrame.title:SetPoint("CENTER", mainFrame, "TOP", 0, -20)
+mainFrame.title:SetText("TypeCraft")
 
-TypeCraftWordNext =  TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-TypeCraftWordNext:SetPoint("TOPRIGHT", TypeCraftFrame, "TOPRIGHT", -10, -70)
-TypeCraftWordNext:SetJustifyH("RIGHT")  -- Align text to the right
-TypeCraftWordNext:SetFont("Interface/AddOns/TypeCraft/fonts/RobotoMono.ttf", 12, "OUTLINE")
+mainCloseButton = CreateFrame("Button", nil, mainFrame, "UIPanelCloseButton")
+mainCloseButton:SetPoint("TOPRIGHT", mainFrame, "TOPRIGHT", -6, -6)
+mainCloseButton:SetScale(0.8) -- optional, makes the button a bit smaller
+-- Word display
+currentLineText = mainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+currentLineText:SetPoint("TOPRIGHT", mainFrame, "TOPRIGHT", -10, -50)
+currentLineText:SetJustifyH("RIGHT")  -- Align text to the right
+currentLineText:SetFont("Interface/AddOns/TypeCraft/fonts/RobotoMono.ttf", 12, "OUTLINE")
+
+nextLineText =  mainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+nextLineText:SetPoint("TOPRIGHT", mainFrame, "TOPRIGHT", -10, -70)
+nextLineText:SetJustifyH("RIGHT")  -- Align text to the right
+nextLineText:SetFont("Interface/AddOns/TypeCraft/fonts/RobotoMono.ttf", 12, "OUTLINE")
 
 -- Result message
-TypeCraftMessage = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-TypeCraftMessage:SetPoint("BOTTOM", 0, 13)
+messageText = mainFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+messageText:SetPoint("BOTTOM", 0, 13)
 
 -- Timer display
-TypeCraftTimerText = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-TypeCraftTimerText:SetPoint("BOTTOM", 0, 55)
-TypeCraftTimerText:SetText("Time: " .. timerDuration)
+timerText = mainFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+timerText:SetPoint("BOTTOM", 0, 55)
+timerText:SetText("Time: " .. timerDuration)
 
-TypeCraftWPMText = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-TypeCraftWPMText:SetPoint("BOTTOMRIGHT", -10, 10)
-TypeCraftWPMText:SetText("WPM (Last): 0")
--- Floating feedback text
-floatingFeedback = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+lastWpmText = mainFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+lastWpmText:SetPoint("BOTTOMRIGHT", -10, 10)
+lastWpmText:SetText("WPM (Last): 0")
+
+bestSessionWpmText = mainFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+bestSessionWpmText:SetPoint("BOTTOMRIGHT", -10, 25)
+bestSessionWpmText:SetText("WPM (Best): 0")
+-- Reset button
+resetButton = CreateFrame("Button", nil, mainFrame, "UIPanelButtonTemplate")
+resetButton:SetSize(80, 22)
+resetButton:SetPoint("BOTTOMLEFT", 40, 45)  -- Above the dropdown
+resetButton:SetText("Reset")
+resetButton:SetScript("OnClick", function()
+    if timerTicker then
+        timerTicker:Cancel()
+        timerTicker = nil
+    end
+    StartNewChallenge()
+end)
+------------------------------------------------------------------------FEEDBACK UI------------------------------------------------------------------------
+floatingFeedback = mainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 floatingFeedback:SetFont("Interface/AddOns/TypeCraft/fonts/RobotoMono.ttf", 12, "OUTLINE")
 floatingFeedback:SetPoint("CENTER") -- initial position (will update per use)
 floatingFeedback:Hide()
@@ -344,44 +367,40 @@ animGroup:SetScript("OnFinished", function()
     floatingFeedback:Hide()
 end)
 
-
-BestResultsWPMText = TypeCraftFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-BestResultsWPMText:SetPoint("BOTTOMRIGHT", -10, 25)
-BestResultsWPMText:SetText("WPM (Best): 0")
--- Post-game results frame
-TypeCraftResultsFrame = CreateFrame("Frame", "TypeCraftResultsFrame", TypeCraftFrame, "BasicFrameTemplateWithInset")
-TypeCraftResultsFrame:SetSize(300, 160)
-TypeCraftResultsFrame:SetPoint("LEFT", TypeCraftFrame, "RIGHT", 5, 0)
-TypeCraftResultsFrame:Hide()
-TypeCraftResultsFrame.title = TypeCraftResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-TypeCraftResultsFrame.title:SetPoint("CENTER", TypeCraftResultsFrame.TitleBg, "CENTER", 0, 0)
-TypeCraftResultsFrame.title:SetText("Challenge Complete!")
+------------------------------------------------------------------------RESULTS UI------------------------------------------------------------------------
+resultsFrame = CreateFrame("Frame", "TypeCraftResultsFrame", mainFrame, "BasicFrameTemplateWithInset")
+resultsFrame:SetSize(300, 160)
+resultsFrame:SetPoint("LEFT", mainFrame, "RIGHT", 5, 0)
+resultsFrame:Hide()
+resultsFrame.title = resultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+resultsFrame.title:SetPoint("CENTER", resultsFrame.TitleBg, "CENTER", 0, 0)
+resultsFrame.title:SetText("Challenge Complete!")
 -- WPM display
 
-ResultsWPM = TypeCraftResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-ResultsWPM:SetPoint("TOPLEFT", 15, -45)
+resultsWpmText = resultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+resultsWpmText:SetPoint("TOPLEFT", 15, -45)
 
 -- Accuracy display
-ResultsAccuracy = TypeCraftResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-ResultsAccuracy:SetPoint("TOPLEFT", 15, -65)
+resultsAccuracyText = resultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+resultsAccuracyText:SetPoint("TOPLEFT", 15, -65)
 
 -- KPM display
-ResultsKPM = TypeCraftResultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-ResultsKPM:SetPoint("TOPLEFT", 15, -85)
+resultsKpmText = resultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+resultsKpmText:SetPoint("TOPLEFT", 15, -85)
 
 -- Close button
-CloseResultsButton = CreateFrame("Button", nil, TypeCraftResultsFrame, "UIPanelButtonTemplate")
-CloseResultsButton:SetSize(60, 22)
-CloseResultsButton:SetPoint("BOTTOM", -30, 10)
-CloseResultsButton:SetText("Close")
-CloseResultsButton:SetScript("OnClick", function()
-    TypeCraftResultsFrame:Hide()
+resultsCloseButton = CreateFrame("Button", nil, resultsFrame, "UIPanelButtonTemplate")
+resultsCloseButton:SetSize(60, 22)
+resultsCloseButton:SetPoint("BOTTOM", -30, 10)
+resultsCloseButton:SetText("Close")
+resultsCloseButton:SetScript("OnClick", function()
+    resultsFrame:Hide()
 end)
-local ShareButton = CreateFrame("Button", nil, TypeCraftResultsFrame, "UIPanelButtonTemplate")
-ShareButton:SetSize(60, 22)
-ShareButton:SetPoint("BOTTOM", 30, 10)
-ShareButton:SetText("Share")
-ShareButton:SetScript("OnClick", function()
+shareButton = CreateFrame("Button", nil, resultsFrame, "UIPanelButtonTemplate")
+shareButton:SetSize(60, 22)
+shareButton:SetPoint("BOTTOM", 30, 10)
+shareButton:SetText("Share")
+shareButton:SetScript("OnClick", function()
         local chatMsg = string.format(
         "I just scored %d WPM with %d%% accuracy and %d KPM in TypeCraft!",
         lastWPM or 0, lastAccuracy or 0, lastKPM or 0
@@ -389,30 +408,30 @@ ShareButton:SetScript("OnClick", function()
     SendChatMessage(chatMsg, selectedChannel)
     end)
 
-local shareChannelDropdown = CreateFrame("Frame", "MyAddon_ShareChannelDropdown", ShareButton, "UIDropDownMenuTemplate")
-shareChannelDropdown:SetPoint("BOTTOMRIGHT", TypeCraftResultsFrame, "BOTTOMRIGHT", 10, 0)
+shareChannelDropdown = CreateFrame("Frame", "MyAddon_ShareChannelDropdown", shareButton, "UIDropDownMenuTemplate")
+shareChannelDropdown:SetPoint("BOTTOMRIGHT", resultsFrame, "BOTTOMRIGHT", 10, 0)
 UIDropDownMenu_SetWidth(shareChannelDropdown, 60)
 UIDropDownMenu_SetText(shareChannelDropdown, "Say") -- default
 
 -- Typing input
-TypeCraftInput = CreateFrame("EditBox", nil, TypeCraftFrame, "InputBoxTemplate")
-TypeCraftInput:SetSize(200, 20)
-TypeCraftInput:SetPoint("BOTTOM", 0, 30)
-TypeCraftInput:SetAutoFocus(false)
-TypeCraftInput:EnableKeyboard(true)
-TypeCraftInput:SetScript("OnEnterPressed", function(self)
+inputField = CreateFrame("EditBox", nil, mainFrame, "InputBoxTemplate")
+inputField:SetSize(200, 20)
+inputField:SetPoint("BOTTOM", 0, 30)
+inputField:SetAutoFocus(false)
+inputField:EnableKeyboard(true)
+inputField:SetScript("OnEnterPressed", function(self)
     HandleWordEntry(self:GetText())
     self:SetText("")
 end)
-TypeCraftInput:SetScript("OnEscapePressed", function(self)
+inputField:SetScript("OnEscapePressed", function(self)
     self:ClearFocus()
 end)
-TypeCraftInput:SetScript("OnTextChanged", function(self)
+inputField:SetScript("OnTextChanged", function(self)
     if not timerRunning and trim(self:GetText()) ~= "" then
         StartTimer()
     end
 end)
-TypeCraftInput:SetScript("OnKeyDown", function(self, key)
+inputField:SetScript("OnKeyDown", function(self, key)
     if key == "SPACE" then
         HandleWordEntry(self:GetText())
         self:SetText("")
@@ -423,10 +442,10 @@ end)
 local function SetTimerDuration(value)
     timerDuration = tonumber(value) or 30
     timerRemaining = timerDuration
-    TypeCraftTimerText:SetText("Time: " .. timerRemaining)
+    timerText:SetText("Time: " .. timerRemaining)
 end
 
-local function InitializeDropdown(self, level)
+local function InitializeTimerDropdown(self, level)
     local info = UIDropDownMenu_CreateInfo()
 
     for _, seconds in ipairs({15, 30, 45, 60}) do
@@ -443,13 +462,12 @@ local function InitializeDropdown(self, level)
         UIDropDownMenu_AddButton(info, level)
     end
 end
-
-TypeCraftDropdown = CreateFrame("Frame", "TypeCraftDropdown", TypeCraftFrame, "UIDropDownMenuTemplate")
-TypeCraftDropdown:SetPoint("BOTTOMLEFT", 5, 10)
-UIDropDownMenu_SetWidth(TypeCraftDropdown, 100)
-UIDropDownMenu_SetText(TypeCraftDropdown, "Timer")
-UIDropDownMenu_Initialize(TypeCraftDropdown, InitializeDropdown)
-UIDropDownMenu_SetSelectedValue(TypeCraftDropdown, timerDuration)
+timerDropdown = CreateFrame("Frame", "TypeCraftDropdown", mainFrame, "UIDropDownMenuTemplate")
+timerDropdown:SetPoint("BOTTOMLEFT", 5, 10)
+UIDropDownMenu_SetWidth(timerDropdown, 100)
+UIDropDownMenu_SetText(timerDropdown, "Timer")
+UIDropDownMenu_Initialize(timerDropdown, InitializeTimerDropdown)
+UIDropDownMenu_SetSelectedValue(timerDropdown, timerDuration)
 UIDropDownMenu_Initialize(shareChannelDropdown, function(self, level)
     for _, option in ipairs(shareChannels) do
         local info = UIDropDownMenu_CreateInfo()
@@ -462,24 +480,7 @@ UIDropDownMenu_Initialize(shareChannelDropdown, function(self, level)
         UIDropDownMenu_AddButton(info, level)
     end
 end)
-
--- Reset button
-local ResetButton = CreateFrame("Button", nil, TypeCraftFrame, "UIPanelButtonTemplate")
-ResetButton:SetSize(80, 22)
-ResetButton:SetPoint("BOTTOMLEFT", 40, 45)  -- Above the dropdown
-ResetButton:SetText("Reset")
-ResetButton:SetScript("OnClick", function()
-    if timerTicker then
-        timerTicker:Cancel()
-        timerTicker = nil
-    end
-    StartNewChallenge()
-end)
-chatMsg = string.format(
-    "I just scored %d WPM with %d%% accuracy and %d KPM in TypeCraft!",
-    wpm, accuracy, kpm
-)
-
+------------------------------------------------------------------------MISC------------------------------------------------------------------------
 function SafeSendChat(msg, channel)
     if not InCombatLockdown() and msg and msg ~= "" then
         local success, err = pcall(function()
