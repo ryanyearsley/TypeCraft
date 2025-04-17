@@ -313,7 +313,31 @@ nextLineText =  mainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge"
 nextLineText:SetPoint("TOPRIGHT", mainFrame, "TOPRIGHT", -10, -70)
 nextLineText:SetJustifyH("RIGHT")  -- Align text to the right
 nextLineText:SetFont("Interface/AddOns/TypeCraft/fonts/RobotoMono.ttf", 12, "OUTLINE")
-
+-- Typing input
+inputField = CreateFrame("EditBox", nil, mainFrame, "InputBoxTemplate")
+inputField:SetParent(mainFrame)
+inputField:SetSize(200, 20)
+inputField:SetPoint("BOTTOM", 0, 30)
+inputField:SetAutoFocus(false)
+inputField:EnableKeyboard(true)
+inputField:SetScript("OnEnterPressed", function(self)
+    HandleWordEntry(self:GetText())
+    self:SetText("")
+end)
+inputField:SetScript("OnEscapePressed", function(self)
+    self:ClearFocus()
+end)
+inputField:SetScript("OnTextChanged", function(self)
+    if not timerRunning and trim(self:GetText()) ~= "" then
+        StartTimer()
+    end
+end)
+inputField:SetScript("OnKeyDown", function(self, key)
+    if key == "SPACE" then
+        HandleWordEntry(self:GetText())
+        self:SetText("")
+    end
+end)
 -- Result message
 messageText = mainFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 messageText:SetPoint("BOTTOM", 0, 13)
@@ -332,8 +356,9 @@ bestSessionWpmText:SetPoint("BOTTOMRIGHT", -10, 25)
 bestSessionWpmText:SetText("WPM (Best): 0")
 -- Reset button
 resetButton = CreateFrame("Button", nil, mainFrame, "UIPanelButtonTemplate")
+resetButton:SetParent(mainFrame)
 resetButton:SetSize(80, 22)
-resetButton:SetPoint("BOTTOMLEFT", 40, 45)  -- Above the dropdown
+resetButton:SetPoint("LEFT", inputField, "RIGHT", 5, 0)
 resetButton:SetText("Reset")
 resetButton:SetScript("OnClick", function()
     if timerTicker then
@@ -388,17 +413,9 @@ resultsAccuracyText:SetPoint("TOPLEFT", 15, -65)
 resultsKpmText = resultsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 resultsKpmText:SetPoint("TOPLEFT", 15, -85)
 
--- Close button
-resultsCloseButton = CreateFrame("Button", nil, resultsFrame, "UIPanelButtonTemplate")
-resultsCloseButton:SetSize(60, 22)
-resultsCloseButton:SetPoint("BOTTOM", -30, 10)
-resultsCloseButton:SetText("Close")
-resultsCloseButton:SetScript("OnClick", function()
-    resultsFrame:Hide()
-end)
 shareButton = CreateFrame("Button", nil, resultsFrame, "UIPanelButtonTemplate")
 shareButton:SetSize(60, 22)
-shareButton:SetPoint("BOTTOM", 30, 10)
+shareButton:SetPoint("BOTTOM", 0, 10)
 shareButton:SetText("Share")
 shareButton:SetScript("OnClick", function()
         local chatMsg = string.format(
@@ -412,31 +429,6 @@ shareChannelDropdown = CreateFrame("Frame", "MyAddon_ShareChannelDropdown", shar
 shareChannelDropdown:SetPoint("BOTTOMRIGHT", resultsFrame, "BOTTOMRIGHT", 10, 0)
 UIDropDownMenu_SetWidth(shareChannelDropdown, 60)
 UIDropDownMenu_SetText(shareChannelDropdown, "Say") -- default
-
--- Typing input
-inputField = CreateFrame("EditBox", nil, mainFrame, "InputBoxTemplate")
-inputField:SetSize(200, 20)
-inputField:SetPoint("BOTTOM", 0, 30)
-inputField:SetAutoFocus(false)
-inputField:EnableKeyboard(true)
-inputField:SetScript("OnEnterPressed", function(self)
-    HandleWordEntry(self:GetText())
-    self:SetText("")
-end)
-inputField:SetScript("OnEscapePressed", function(self)
-    self:ClearFocus()
-end)
-inputField:SetScript("OnTextChanged", function(self)
-    if not timerRunning and trim(self:GetText()) ~= "" then
-        StartTimer()
-    end
-end)
-inputField:SetScript("OnKeyDown", function(self, key)
-    if key == "SPACE" then
-        HandleWordEntry(self:GetText())
-        self:SetText("")
-    end
-end)
 
 -- Timer duration dropdown
 local function SetTimerDuration(value)
