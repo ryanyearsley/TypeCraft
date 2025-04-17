@@ -17,16 +17,18 @@ local shareChannels = {
 ------------------------------------------------------------------------INITIALIZATION------------------------------------------------------------------------
 
 --ui
-local mainFrame, mainCloseButton, currentLineText, nextLineText, messageText, inputField, resetButton
+local mainFrame, mainCloseButton, currentLineText, nextLineText, messageText, inputField, resetButton, settingsButton
 local timerText, lastWpmText, bestSessionWpmText
 local floatingFeedback, animGroup, moveUp, fadeOut
-local resultsFrame, resultsCloseButton, resultsWpmText, resultsAccuracyText, resultsKpmText, shareButton, shareChannelDropdown
-local timerDropdown
+local resultsFrame, resultsWpmText, resultsAccuracyText, resultsKpmText, shareButton, shareChannelDropdown
+local settingsFrame, timerDropdownLabel, timerDropdown, includeTitle
+local easyCheckbox, mediumCheckbox, hardCheckbox, fantasyCheckbox, goofyCheckbox, acronymCheckbox
 --core game logic
 local currentWords = {}
 local nextWords = {}
 local challengeActive = false
 local timerRunning = false
+local timerRemaining = 0
 --results stuff
 local correctCount = 0
 local characterCount = 0
@@ -103,7 +105,7 @@ local function BuildWordLine()
     local charCount = 0
 
     while true do
-        local word = PickRandomWord()
+        local word = TypeCraftWords.pickRandomWord()
         local wordLength = #word + 1  -- +1 for space
         if charCount + wordLength > MAX_LINE_WIDTH then break end
         table.insert(line, word)
@@ -132,6 +134,7 @@ local function StartNewChallenge()
         timerTicker:Cancel()
         timerTicker = nil
     end
+    TypeCraftWords.updateCombinedWordList()
     resultsFrame:Hide()
     correctCount = 0
     characterCount = 0
@@ -367,6 +370,15 @@ resetButton:SetScript("OnClick", function()
     end
     StartNewChallenge()
 end)
+-- settings button
+settingsButton = CreateFrame("Button", nil, mainFrame, "UIPanelButtonTemplate")
+settingsButton:SetParent(mainFrame)
+settingsButton:SetSize(80, 22)
+settingsButton:SetPoint("RIGHT", inputField, "LEFT", -5, 0)
+settingsButton:SetText("Settings")
+settingsButton:SetScript("OnClick", function()
+    settingsFrame:Show()
+end)
 ------------------------------------------------------------------------FEEDBACK UI------------------------------------------------------------------------
 floatingFeedback = mainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 floatingFeedback:SetFont("Interface/AddOns/TypeCraft/fonts/RobotoMono.ttf", 12, "OUTLINE")
@@ -425,12 +437,38 @@ shareButton:SetScript("OnClick", function()
     SendChatMessage(chatMsg, selectedChannel)
     end)
 
+--share channel dropdown
 shareChannelDropdown = CreateFrame("Frame", "MyAddon_ShareChannelDropdown", shareButton, "UIDropDownMenuTemplate")
 shareChannelDropdown:SetPoint("BOTTOMRIGHT", resultsFrame, "BOTTOMRIGHT", 10, 0)
 UIDropDownMenu_SetWidth(shareChannelDropdown, 60)
 UIDropDownMenu_SetText(shareChannelDropdown, "Say") -- default
+UIDropDownMenu_Initialize(shareChannelDropdown, function(self, level)
+    for _, option in ipairs(shareChannels) do
+        local info = UIDropDownMenu_CreateInfo()
+        info.text = option.text
+        info.value = option.value
+        info.func = function()
+            selectedChannel = option.value
+            UIDropDownMenu_SetText(shareChannelDropdown, option.text)
+        end
+        UIDropDownMenu_AddButton(info, level)
+    end
+end)
+------------------------------------------------------------------------SETTINGS UI------------------------------------------------------------------------
+settingsFrame = CreateFrame("Frame", "TypeCraftResultsFrame", mainFrame, "BasicFrameTemplateWithInset")
+settingsFrame:SetSize(250, 160)
+settingsFrame:SetPoint("RIGHT", mainFrame, "LEFT", 5, 0)
+settingsFrame:Hide()
+settingsFrame.title = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+settingsFrame.title:SetPoint("CENTER", settingsFrame.TitleBg, "CENTER", 0, 0)
+settingsFrame.title:SetText("Settings")
 
+timerDropdownLabel =  settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+timerDropdownLabel:SetPoint("TOPLEFT", settingsFrame, "TOPLEFT", 20, -35)
+timerDropdownLabel:SetText("Duration (Seconds): ")
 -- Timer duration dropdown
+timerDropdown = CreateFrame("Frame", "TypeCraftDropdown", settingsFrame, "UIDropDownMenuTemplate")
+timerDropdown:SetPoint("LEFT", timerDropdownLabel, "RIGHT", 5, -2)
 local function SetTimerDuration(value)
     timerDuration = tonumber(value) or 30
     timerRemaining = timerDuration
@@ -454,24 +492,34 @@ local function InitializeTimerDropdown(self, level)
         UIDropDownMenu_AddButton(info, level)
     end
 end
-timerDropdown = CreateFrame("Frame", "TypeCraftDropdown", mainFrame, "UIDropDownMenuTemplate")
-timerDropdown:SetPoint("BOTTOMLEFT", 5, 10)
-UIDropDownMenu_SetWidth(timerDropdown, 100)
+UIDropDownMenu_SetWidth(timerDropdown, 80)
 UIDropDownMenu_SetText(timerDropdown, "Timer")
 UIDropDownMenu_Initialize(timerDropdown, InitializeTimerDropdown)
 UIDropDownMenu_SetSelectedValue(timerDropdown, timerDuration)
-UIDropDownMenu_Initialize(shareChannelDropdown, function(self, level)
-    for _, option in ipairs(shareChannels) do
-        local info = UIDropDownMenu_CreateInfo()
-        info.text = option.text
-        info.value = option.value
-        info.func = function()
-            selectedChannel = option.value
-            UIDropDownMenu_SetText(shareChannelDropdown, option.text)
-        end
-        UIDropDownMenu_AddButton(info, level)
-    end
-end)
+
+includeTitle = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+includeTitle:SetPoint("TOP", settingsFrame, "TOP", 0, -55)
+includeTitle:SetText("Include Words")
+local function CreateCheckbox(label, key, xOffset, yOffset)
+    local cb = CreateFrame("CheckButton", nil, settingsFrame, "UICheckButtonTemplate")
+    cb:SetPoint("CENTER", settingsFrame, "TOP", xOffset, yOffset)
+    cb.text:SetText(label)
+    cb:SetChecked(TypeCraftWords.enabledPools[key])
+    cb:SetScript("OnClick", function(self)
+        TypeCraftWords.enabledPools[key] = self:GetChecked()
+        TypeCraftWords.updateCombinedWordList()
+        StartNewChallenge()
+    end)
+    return cb
+end
+
+-- Create checkboxes for word pools
+easyCheckbox = CreateCheckbox("Easy", "easy", -50,-90)
+mediumCheckbox = CreateCheckbox("Medium", "medium", -50, -115)
+hardCheckbox = CreateCheckbox("Hard", "hard", -50, -140)
+fantasyCheckbox = CreateCheckbox("Fantasy", "fantasy", 30,-90)
+goofyCheckbox = CreateCheckbox("Goofy", "goofy", 30, -115)
+acronymCheckbox = CreateCheckbox("Acronyms", "acronyms", 30, -140)
 ------------------------------------------------------------------------MISC------------------------------------------------------------------------
 function SafeSendChat(msg, channel)
     if not InCombatLockdown() and msg and msg ~= "" then
