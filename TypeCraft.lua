@@ -21,7 +21,7 @@ local mainFrame, mainCloseButton, currentLineText, nextLineText, messageText, in
 local timerText, lastWpmText, bestSessionWpmText
 local floatingFeedback, animGroup, moveUp, fadeOut
 local resultsFrame, resultsWpmText, resultsAccuracyText, resultsKpmText, shareButton, shareChannelDropdown
-local settingsFrame, timerDropdownLabel, timerDropdown, includeTitle
+local settingsFrame, timerDropdownLabel, timerDropdown, difficultyTitle, includeTitle
 local easyCheckbox, mediumCheckbox, hardCheckbox, fantasyCheckbox, goofyCheckbox, acronymCheckbox
 --core game logic
 local currentWords = {}
@@ -456,7 +456,7 @@ UIDropDownMenu_Initialize(shareChannelDropdown, function(self, level)
 end)
 ------------------------------------------------------------------------SETTINGS UI------------------------------------------------------------------------
 settingsFrame = CreateFrame("Frame", "TypeCraftResultsFrame", mainFrame, "BasicFrameTemplateWithInset")
-settingsFrame:SetSize(250, 160)
+settingsFrame:SetSize(250, 200)
 settingsFrame:SetPoint("RIGHT", mainFrame, "LEFT", 5, 0)
 settingsFrame:Hide()
 settingsFrame.title = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -478,7 +478,7 @@ end
 local function InitializeTimerDropdown(self, level)
     local info = UIDropDownMenu_CreateInfo()
 
-    for _, seconds in ipairs({15, 30, 45, 60}) do
+    for _, seconds in ipairs({15, 30, 45, 60, 90, 120, 180, 240, 300}) do
         info = UIDropDownMenu_CreateInfo()  -- Important: fresh info each time
         info.text = seconds .. " seconds"
         info.value = seconds
@@ -497,10 +497,25 @@ UIDropDownMenu_SetText(timerDropdown, "Timer")
 UIDropDownMenu_Initialize(timerDropdown, InitializeTimerDropdown)
 UIDropDownMenu_SetSelectedValue(timerDropdown, timerDuration)
 
+difficultyTitle = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+difficultyTitle:SetPoint("TOP", settingsFrame, "TOP", -50, -55)
+difficultyTitle:SetText("Difficulty: ")
 includeTitle = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-includeTitle:SetPoint("TOP", settingsFrame, "TOP", 0, -55)
-includeTitle:SetText("Include Words")
-local function CreateCheckbox(label, key, xOffset, yOffset)
+includeTitle:SetPoint("TOP", settingsFrame, "TOP", 50, -55)
+includeTitle:SetText("Include: ")
+local function CreateDifficultyCheckbox(label, key, xOffset, yOffset)
+    local cb = CreateFrame("CheckButton", nil, settingsFrame, "UICheckButtonTemplate")
+    cb:SetPoint("CENTER", settingsFrame, "TOP", xOffset, yOffset)
+    cb.text:SetText(label)
+    cb:SetChecked(TypeCraftWords.enabledDifficulties[key])
+    cb:SetScript("OnClick", function(self)
+        TypeCraftWords.enabledDifficulties[key] = self:GetChecked()
+        TypeCraftWords.updateCombinedWordList()
+        StartNewChallenge()
+    end)
+    return cb
+end
+local function CreatePoolCheckbox(label, key, xOffset, yOffset)
     local cb = CreateFrame("CheckButton", nil, settingsFrame, "UICheckButtonTemplate")
     cb:SetPoint("CENTER", settingsFrame, "TOP", xOffset, yOffset)
     cb.text:SetText(label)
@@ -514,12 +529,14 @@ local function CreateCheckbox(label, key, xOffset, yOffset)
 end
 
 -- Create checkboxes for word pools
-easyCheckbox = CreateCheckbox("Easy", "easy", -50,-90)
-mediumCheckbox = CreateCheckbox("Medium", "medium", -50, -115)
-hardCheckbox = CreateCheckbox("Hard", "hard", -50, -140)
-fantasyCheckbox = CreateCheckbox("Fantasy", "fantasy", 30,-90)
-goofyCheckbox = CreateCheckbox("Goofy", "goofy", 30, -115)
-acronymCheckbox = CreateCheckbox("Acronyms", "acronyms", 30, -140)
+easyCheckbox = CreateDifficultyCheckbox("Easy", "easy", -70,-90)
+mediumCheckbox = CreateDifficultyCheckbox("Medium", "medium", -70, -115)
+hardCheckbox = CreateDifficultyCheckbox("Hard", "hard", -70, -140)
+hardCheckbox = CreateDifficultyCheckbox("Hardcore", "hardcore", -70, -165)
+fantasyCheckbox = CreatePoolCheckbox("Common", "common", 30,-90)
+goofyCheckbox = CreatePoolCheckbox("Fantasy", "fantasy", 30, -115)
+acronymCheckbox = CreatePoolCheckbox("Funny", "funny", 30, -140)
+acronymCheckbox = CreatePoolCheckbox("Acronyms", "acronyms", 30, -165)
 ------------------------------------------------------------------------MISC------------------------------------------------------------------------
 function SafeSendChat(msg, channel)
     if not InCombatLockdown() and msg and msg ~= "" then
