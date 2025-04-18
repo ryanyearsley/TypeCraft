@@ -269,6 +269,11 @@ local function HandleWordEntry(input)
     else
         ShowTemporaryMessage("Wrong :(", RED)
         errorCount = errorCount + 1
+           -- End challenge immediately if hardcore mode is on
+        if TypeCraftWords.enabledDifficulties.hardcore then
+            EndCurrentChallenge()
+            return
+        end
     end
     ShowFloatingWordFeedback(currentWords[1], trimmedInput)
     totalKeystrokes = totalKeystrokes + #currentWords[1] + 1
