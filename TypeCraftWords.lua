@@ -117,13 +117,15 @@ TypeCraftWords.acronyms = {
 TypeCraftWords.enabledPools = {
     common = true,
     fantasy = true,
-    goofy = false
+    goofy = false,
+    acronyms = false
 }
 TypeCraftWords.enabledDifficulties = {
     easy = true,
     medium = true,
     hard = false,
-    hardcore = false
+    hardcore = false,
+    caseSensitive = false
 }
 
 TypeCraftWords.combinedWordList = {}

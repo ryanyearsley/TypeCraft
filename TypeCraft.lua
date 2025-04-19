@@ -210,16 +210,18 @@ local function StartTimer()
     end)
 end
 
-local function ShowFloatingWordFeedback(word, playerTyped)
-    local wasCorrect = word == playerTyped
-
+local function ShowFloatingWordFeedback(word, playerTyped, wasCorrect)
     local r, g, b = 0, 1, 0 -- green
     if not wasCorrect then
         r, g, b = 1, 0, 0 -- red
     end
 
+    local displayingText = playerTyped
+    if wasCorrect then
+        displayingText = word
+    end
     floatingFeedback:SetFontObject(currentLineText:GetFontObject())
-    floatingFeedback:SetText(playerTyped)
+    floatingFeedback:SetText(displayingText)
     floatingFeedback:SetTextColor(r, g, b)
 
     -- Calculate total width of remaining text
@@ -258,25 +260,34 @@ local function ShowFloatingWordFeedback(word, playerTyped)
     animGroup:Stop()
     animGroup:Play()
 end
--- Function to handle word entry
+
 local function HandleWordEntry(input)
     if not challengeActive or not currentWords or #currentWords == 0 then return end
-    local trimmedInput = trim(input)
-    if trimmedInput:lower() == currentWords[1]:lower() then
+    local trimmedInput   = strtrim(input) or ""
+    local trimmedTarget   = strtrim(currentWords[1]) or ""
+    local comparingInput = trimmedInput
+    local comparingTarget = trimmedTarget
+    local wasCorrect = false
+    if not TypeCraftWords.enabledDifficulties.caseSensitive then
+        comparingInput  = strlower(trimmedInput)
+        comparingTarget = strlower(trimmedTarget)
+    end
+    if  comparingInput == comparingTarget then
+        wasCorrect = true
         ShowTemporaryMessage("Correct!", GREEN)
-        correctCount = correctCount + 1 
-        characterCount = characterCount + #currentWords[1] + 1  -- +1 for the space
+        correctCount    = correctCount + 1 
+        characterCount  = characterCount + #trimmedTarget + 1
     else
         ShowTemporaryMessage("Wrong :(", RED)
         errorCount = errorCount + 1
-           -- End challenge immediately if hardcore mode is on
         if TypeCraftWords.enabledDifficulties.hardcore then
             EndCurrentChallenge()
             return
         end
     end
-    ShowFloatingWordFeedback(currentWords[1], trimmedInput)
-    totalKeystrokes = totalKeystrokes + #currentWords[1] + 1
+
+    ShowFloatingWordFeedback(trimmedTarget, trimmedInput, wasCorrect)
+    totalKeystrokes = totalKeystrokes + #trimmedTarget + 1
     table.remove(currentWords, 1)
     if #currentWords == 0 then
         StartNewLine()
@@ -284,6 +295,7 @@ local function HandleWordEntry(input)
         HighlightCurrentWord()
     end
 end
+
 
 ------------------------------------------------------------------------MAIN UI------------------------------------------------------------------------
 -- Create the main frame
@@ -339,12 +351,16 @@ inputField:SetScript("OnTextChanged", function(self)
     if not timerRunning and trim(self:GetText()) ~= "" then
         StartTimer()
     end
+    self:SetText(trim(self:GetText()))
 end)
-inputField:SetScript("OnKeyDown", function(self, key)
-    if key == "SPACE" then
-        HandleWordEntry(self:GetText())
+inputField:SetScript("OnChar", function(self, char)
+    if char == " " then
+        -- by now the space is already in the text
+        local txt = trim(self:GetText())
+        HandleWordEntry(txt)
         self:SetText("")
     end
+    -- other chars are auto‑inserted; we eat them via Propagate=false
 end)
 -- Result message
 messageText = mainFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -461,7 +477,7 @@ UIDropDownMenu_Initialize(shareChannelDropdown, function(self, level)
 end)
 ------------------------------------------------------------------------SETTINGS UI------------------------------------------------------------------------
 settingsFrame = CreateFrame("Frame", "TypeCraftResultsFrame", mainFrame, "BasicFrameTemplateWithInset")
-settingsFrame:SetSize(250, 200)
+settingsFrame:SetSize(250, 220)
 settingsFrame:SetPoint("RIGHT", mainFrame, "LEFT", 5, 0)
 settingsFrame:Hide()
 settingsFrame.title = settingsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -533,11 +549,13 @@ local function CreatePoolCheckbox(label, key, xOffset, yOffset)
     return cb
 end
 
--- Create checkboxes for word pools
+-- difficulties
 easyCheckbox = CreateDifficultyCheckbox("Easy", "easy", -70,-90)
 mediumCheckbox = CreateDifficultyCheckbox("Medium", "medium", -70, -115)
 hardCheckbox = CreateDifficultyCheckbox("Hard", "hard", -70, -140)
 hardCheckbox = CreateDifficultyCheckbox("Hardcore", "hardcore", -70, -165)
+hardCheckbox = CreateDifficultyCheckbox("Case-Sensitive", "caseSensitive", -70, -190)
+-- word pools
 fantasyCheckbox = CreatePoolCheckbox("Common", "common", 30,-90)
 goofyCheckbox = CreatePoolCheckbox("Fantasy", "fantasy", 30, -115)
 acronymCheckbox = CreatePoolCheckbox("Funny", "funny", 30, -140)
