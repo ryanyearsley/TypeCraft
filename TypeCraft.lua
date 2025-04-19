@@ -46,7 +46,9 @@ local selectedChannel = "SAY" -- default
 local function trim(s)
     return s:match("^%s*(.-)%s*$")
 end
-
+local function EscapeForChat(msg)
+    return msg:gsub("%%", "%%%%")
+end
 local function ShowMessage(message, color)
     messageText:SetTextColor(color.r, color.g, color.b)
     messageText:SetText(message)
@@ -381,8 +383,8 @@ bestSessionWpmText:SetText("WPM (Best): 0")
 -- Reset button
 resetButton = CreateFrame("Button", nil, mainFrame, "UIPanelButtonTemplate")
 resetButton:SetParent(mainFrame)
-resetButton:SetSize(80, 22)
-resetButton:SetPoint("LEFT", inputField, "RIGHT", 5, 0)
+resetButton:SetSize(70, 22)
+resetButton:SetPoint("LEFT", inputField, "RIGHT", -1, 0)
 resetButton:SetText("Reset")
 resetButton:SetScript("OnClick", function()
     if timerTicker then
@@ -394,7 +396,7 @@ end)
 -- settings button
 settingsButton = CreateFrame("Button", nil, mainFrame, "UIPanelButtonTemplate")
 settingsButton:SetParent(mainFrame)
-settingsButton:SetSize(80, 22)
+settingsButton:SetSize(70, 22)
 settingsButton:SetPoint("RIGHT", inputField, "LEFT", -5, 0)
 settingsButton:SetText("Settings")
 settingsButton:SetScript("OnClick", function()
@@ -451,13 +453,38 @@ shareButton:SetSize(60, 22)
 shareButton:SetPoint("BOTTOM", 0, 10)
 shareButton:SetText("Share")
 shareButton:SetScript("OnClick", function()
-        local chatMsg = string.format(
-        "I just scored %d WPM with %d%% accuracy and %d KPM in TypeCraft!",
-        lastWPM or 0, lastAccuracy or 0, lastKPM or 0
+    local difficultyOrder = {"easy", "medium", "hard", "hardcore", "caseSensitive"}
+    local poolOrder = {"common", "fantasy", "goofy", "acronyms"}
+    
+    -- Build the difficulties string in the correct order
+    local difficulties = {}
+    for _, key in ipairs(difficultyOrder) do
+        if TypeCraftWords.enabledDifficulties[key] then
+            table.insert(difficulties, key)
+        end
+    end
+    
+    -- Build the pools string in the correct order
+    local pools = {}
+    for _, key in ipairs(poolOrder) do
+        if TypeCraftWords.enabledPools[key] then
+            table.insert(pools, key)
+        end
+    end
+    
+    -- Convert to a string for display
+    local difficultyText = table.concat(difficulties, ", ")
+    local poolText = table.concat(pools, ", ")
+    local chatMsg = string.format(
+        "I just scored %d WPM with %d percent accuracy and %d KPM in TypeCraft! (Duration: %d seconds --- Difficulties: %s --- Word Pools: %s)",
+        lastWPM or 0, lastAccuracy or 0, lastKPM or 0, timerDuration, difficultyText, poolText
     )
-    SendChatMessage(chatMsg, selectedChannel)
-    end)
-
+-- Escape any unexpected % symbols that may have been included
+chatMsg = chatMsg:gsub("%%", "%%%%")
+-- Escape the pipe symbol
+chatMsg = chatMsg:gsub("|", "\124")
+SendChatMessage(chatMsg, selectedChannel)
+end)
 --share channel dropdown
 shareChannelDropdown = CreateFrame("Frame", "MyAddon_ShareChannelDropdown", shareButton, "UIDropDownMenuTemplate")
 shareChannelDropdown:SetPoint("BOTTOMRIGHT", resultsFrame, "BOTTOMRIGHT", 10, 0)
@@ -558,7 +585,7 @@ hardCheckbox = CreateDifficultyCheckbox("Case-Sensitive", "caseSensitive", -70, 
 -- word pools
 fantasyCheckbox = CreatePoolCheckbox("Common", "common", 30,-90)
 goofyCheckbox = CreatePoolCheckbox("Fantasy", "fantasy", 30, -115)
-acronymCheckbox = CreatePoolCheckbox("Funny", "funny", 30, -140)
+acronymCheckbox = CreatePoolCheckbox("Goofy", "goofy", 30, -140)
 acronymCheckbox = CreatePoolCheckbox("Acronyms", "acronyms", 30, -165)
 ------------------------------------------------------------------------MISC------------------------------------------------------------------------
 function SafeSendChat(msg, channel)
