@@ -1,4 +1,4 @@
-## Interface: 11506
+## Interface: 11507
 ## Title: TypeCraft
 ## Notes: An embedded typing game to play when you're waiting for stuff.
 ## Author: Skidd McMarx
